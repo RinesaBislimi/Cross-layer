@@ -151,9 +151,9 @@ export class ApiService {
     );
   }
 
-  analyzeLog(logId: number): Observable<{ log_id: number; explanation: string }> {
+  analyzeLog(logId: number, signals: string[] = []): Observable<{ log_id: number; explanation: string }> {
     return this.http.post<{ log_id: number; explanation: string }>(
-      `${this.base}/admin/analyze/log/${logId}`, null
+      `${this.base}/admin/analyze/log/${logId}`, { signals }
     );
   }
 

@@ -1,0 +1,294 @@
+.chains-page {
+  max-width: 1000px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* ── Summary row ─────────────────────────────────────────── */
+.summary-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.summary-chip {
+  flex: 1;
+  min-width: 130px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.9rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  box-shadow: var(--shadow-xs);
+}
+
+.summary-chip-danger { border-color: #fecaca; background: #fff8f8; }
+
+.chip-val {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.summary-chip-danger .chip-val { color: var(--danger); }
+
+.chip-lbl {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* ── Chain list ──────────────────────────────────────────── */
+.chains-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* ── Chain card ──────────────────────────────────────────── */
+.chain-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+/* Card header */
+.chain-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  cursor: pointer;
+  flex-wrap: wrap;
+}
+
+.chain-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.chain-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+/* Risk badge */
+.risk-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+.risk-score {
+  font-size: 0.72rem;
+  font-weight: 700;
+  opacity: 0.85;
+}
+.risk-critical { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
+.risk-high     { background: #fff7ed; color: #9a3412; border-color: #fed7aa; }
+.risk-medium   { background: #fefce8; color: #854d0e; border-color: #fde68a; }
+.risk-low      { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+
+/* Cross-layer pill */
+.cross-layer-pill {
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+}
+
+/* Entity */
+.chain-entity {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Time */
+.chain-time {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* Expand button */
+.btn-expand {
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.2rem 0.55rem;
+  cursor: pointer;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  transition: background 0.1s, border-color 0.1s;
+}
+.btn-expand:hover, .btn-expand.expanded {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+  color: var(--accent);
+}
+
+/* Layer row */
+.layer-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.events-count {
+  margin-left: auto;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+/* ── Timeline ────────────────────────────────────────────── */
+.timeline {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-left: 1.5rem;
+  border-top: 1px solid var(--border);
+  padding-top: 1rem;
+  margin-top: 0.25rem;
+}
+
+.timeline-line {
+  position: absolute;
+  left: 0.65rem;
+  top: 1rem;
+  bottom: 1rem;
+  width: 2px;
+  background: var(--border);
+  border-radius: 1px;
+}
+
+.timeline-event {
+  position: relative;
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.6rem 0 0.6rem 0.75rem;
+}
+
+.timeline-dot {
+  position: absolute;
+  left: -1.06rem;
+  top: 1.05rem;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 1px var(--border);
+}
+
+.timeline-dot.risk-critical { background: #ef4444; box-shadow: 0 0 0 1px #fca5a5; }
+.timeline-dot.risk-high     { background: #f97316; box-shadow: 0 0 0 1px #fed7aa; }
+.timeline-dot.risk-medium   { background: #fbbf24; box-shadow: 0 0 0 1px #fde68a; }
+.timeline-dot.risk-low      { background: #34d399; box-shadow: 0 0 0 1px #a7f3d0; }
+
+.timeline-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.evt-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.evt-time {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+  min-width: 75px;
+}
+
+.evt-risk {
+  margin-left: auto;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+}
+
+.evt-type {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.evt-entity {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+/* ── States ──────────────────────────────────────────────── */
+.state-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 4rem 1rem;
+  color: var(--text-muted);
+}
+.state-label { font-size: 0.875rem; }
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+  border: 1px solid #fecaca;
+  color: var(--danger);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+.error-icon { font-size: 1rem; }
+
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-muted);
+}
+.empty-icon { display: block; font-size: 2.5rem; margin-bottom: 0.75rem; }
+.empty-state p { margin: 0.25rem 0; font-size: 0.875rem; }
+.empty-sub { font-size: 0.78rem; }

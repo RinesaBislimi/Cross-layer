@@ -1,0 +1,145 @@
+<div class="alert-rules-page">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1>Alert Rules</h1>
+      <p class="subtitle">Define conditions that should trigger notifications</p>
+    </div>
+    <button class="btn-primary" (click)="openForm()">+ New Rule</button>
+  </div>
+
+  <!-- Notice banner -->
+  <div class="notice-banner">
+    <span class="notice-icon">ℹ</span>
+    <span>Rules are evaluated client-side — the browser must be open to receive browser notifications.</span>
+  </div>
+
+  <!-- Add form -->
+  <div *ngIf="showForm" class="card form-card">
+    <h2 class="form-title">New Alert Rule</h2>
+
+    <!-- Error -->
+    <div *ngIf="formError" class="form-error">
+      <span>⚠ {{ formError }}</span>
+    </div>
+
+    <div class="form-grid">
+
+      <!-- Rule name -->
+      <div class="form-group form-group-full">
+        <label class="form-label" for="rule-name">Rule name <span class="required">*</span></label>
+        <input
+          id="rule-name"
+          class="form-input"
+          type="text"
+          placeholder="e.g. Alert on critical network incidents"
+          [(ngModel)]="newRule.name"
+        />
+      </div>
+
+      <!-- Condition -->
+      <div class="form-group">
+        <label class="form-label" for="rule-cond">Condition <span class="required">*</span></label>
+        <select id="rule-cond" class="form-select" [(ngModel)]="newRule.condition">
+          <option *ngFor="let c of conditions" [value]="c.value">{{ c.label }}</option>
+        </select>
+      </div>
+
+      <!-- Layer -->
+      <div class="form-group">
+        <label class="form-label" for="rule-layer">Layer</label>
+        <select id="rule-layer" class="form-select" [(ngModel)]="newRule.layer">
+          <option *ngFor="let l of layers" [value]="l.value">{{ l.label }}</option>
+        </select>
+      </div>
+
+      <!-- Notification method -->
+      <div class="form-group">
+        <label class="form-label" for="rule-method">Notification method <span class="required">*</span></label>
+        <select id="rule-method" class="form-select" [(ngModel)]="newRule.notifyMethod">
+          <option *ngFor="let m of notifyMethods" [value]="m.value">{{ m.label }}</option>
+        </select>
+      </div>
+
+      <!-- Target (webhook/email) -->
+      <div class="form-group" *ngIf="needsTarget(newRule.notifyMethod)">
+        <label class="form-label" for="rule-target">
+          {{ newRule.notifyMethod === 'webhook' ? 'Webhook URL' : 'Email address' }}
+          <span class="required">*</span>
+        </label>
+        <input
+          id="rule-target"
+          class="form-input"
+          type="text"
+          [placeholder]="targetPlaceholder(newRule.notifyMethod)"
+          [(ngModel)]="newRule.notifyTarget"
+        />
+      </div>
+
+    </div>
+
+    <div class="form-actions">
+      <button class="btn-primary" (click)="addRule()">Save Rule</button>
+      <button class="btn-secondary" (click)="resetForm()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Rules list -->
+  <div *ngIf="rules.length > 0" class="rules-list">
+    <div *ngFor="let rule of rules" class="rule-card card" [class.rule-disabled]="!rule.enabled">
+
+      <div class="rule-top">
+        <!-- Name + enabled toggle -->
+        <div class="rule-name-row">
+          <span class="rule-name">{{ rule.name }}</span>
+          <label class="toggle-wrap" [title]="rule.enabled ? 'Disable rule' : 'Enable rule'">
+            <input
+              type="checkbox"
+              class="toggle-input"
+              [checked]="rule.enabled"
+              (change)="toggleRule(rule.id)"
+            />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <!-- Delete -->
+        <button class="btn-delete" (click)="deleteRule(rule.id)" title="Delete rule">✕</button>
+      </div>
+
+      <!-- Condition badge -->
+      <div class="rule-meta">
+        <span class="cond-badge" [class]="conditionBadgeClass(rule.condition)">
+          {{ conditionLabel(rule.condition) }}
+        </span>
+        <span class="layer-chip">{{ layerLabel(rule.layer) }}</span>
+      </div>
+
+      <!-- Notify + stats row -->
+      <div class="rule-bottom">
+        <span class="notify-method">
+          <span class="notify-icon">
+            {{ rule.notifyMethod === 'browser' ? '🔔' : rule.notifyMethod === 'webhook' ? '🔗' : '✉' }}
+          </span>
+          {{ notifyLabel(rule.notifyMethod) }}
+          <span *ngIf="rule.notifyTarget" class="notify-target">→ {{ rule.notifyTarget }}</span>
+        </span>
+        <div class="rule-stats">
+          <span class="trigger-count">{{ rule.triggerCount }} trigger{{ rule.triggerCount !== 1 ? 's' : '' }}</span>
+          <span class="created-at">Created {{ formatDate(rule.createdAt) }}</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Empty state -->
+  <div *ngIf="rules.length === 0 && !showForm" class="empty-state card">
+    <span class="empty-icon">🔕</span>
+    <h3>No alert rules yet</h3>
+    <p>Create your first rule to start receiving notifications when threats are detected.</p>
+    <button class="btn-primary" (click)="openForm()">+ Create First Rule</button>
+  </div>
+
+</div>

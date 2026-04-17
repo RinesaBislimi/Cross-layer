@@ -1,0 +1,227 @@
+.heatmap-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* ── Stats row ───────────────────────────────────────────── */
+.stats-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.stat-chip {
+  flex: 1;
+  min-width: 140px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  box-shadow: var(--shadow-xs);
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* ── Hover bar ───────────────────────────────────────────── */
+.hover-bar {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.55rem 1rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  opacity: 0;
+  transition: opacity 0.15s;
+  min-height: 36px;
+  box-shadow: var(--shadow-xs);
+}
+.hover-bar.hover-bar-visible {
+  opacity: 1;
+  color: var(--text);
+}
+.hover-icon { color: var(--accent); font-size: 0.9rem; }
+
+/* ── Grid card ───────────────────────────────────────────── */
+.grid-card {
+  padding: 1.5rem;
+  overflow-x: auto;
+}
+
+.grid-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 720px;
+}
+
+/* Hour labels row */
+.hour-labels {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-bottom: 2px;
+}
+
+.day-label-spacer {
+  width: 36px;
+  flex-shrink: 0;
+}
+
+.hour-label {
+  width: 28px;
+  text-align: center;
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+/* Grid rows */
+.grid-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.grid-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.day-label {
+  width: 36px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-align: right;
+  padding-right: 6px;
+  flex-shrink: 0;
+  line-height: 28px;
+}
+
+.heat-cell {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: transform 0.1s, filter 0.1s;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.heat-cell:hover {
+  transform: scale(1.25);
+  filter: brightness(0.9);
+  z-index: 10;
+  position: relative;
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+/* ── Legend ──────────────────────────────────────────────── */
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.legend-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.legend-scale {
+  display: flex;
+  gap: 2px;
+}
+
+.legend-cell {
+  width: 22px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.legend-divider {
+  flex: 1;
+}
+
+/* ── States ──────────────────────────────────────────────── */
+.state-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 4rem 1rem;
+  color: var(--text-muted);
+}
+
+.state-label {
+  font-size: 0.875rem;
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+  border: 1px solid #fecaca;
+  color: var(--danger);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+.error-icon { font-size: 1rem; }
+
+.legend-stops {
+  display: flex;
+  gap: 2px;
+}
+.legend-stop-label {
+  width: 22px;
+  font-size: 0.58rem;
+  color: var(--text-muted);
+  text-align: center;
+}

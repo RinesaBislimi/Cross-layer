@@ -13,30 +13,43 @@ import { WebSocketService } from './core/services/websocket.service';
       <!-- Sidebar nav -->
       <nav class="sidenav">
         <div class="nav-brand">
-          <span class="brand-icon">🛡</span>
           <span class="brand-name">CrossLayer</span>
         </div>
 
         <div class="nav-links">
           <a routerLink="/dashboard"   routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-link">
-            <span class="nav-icon">🏠</span><span class="nav-label">Dashboard</span>
+            <span class="nav-label">Dashboard</span>
           </a>
           <a routerLink="/logs"        routerLinkActive="active" class="nav-link">
-            <span class="nav-icon">📋</span><span class="nav-label">Logs</span>
+            <span class="nav-label">Logs</span>
           </a>
           <a routerLink="/incidents"   routerLinkActive="active" class="nav-link">
-            <span class="nav-icon">🚨</span>
             <span class="nav-label">Incidents</span>
             <span class="nav-badge" *ngIf="alertCount > 0">{{ alertCount > 99 ? '99+' : alertCount }}</span>
           </a>
           <a routerLink="/statistics"  routerLinkActive="active" class="nav-link">
-            <span class="nav-icon">📊</span><span class="nav-label">Statistics</span>
+            <span class="nav-label">Statistics</span>
           </a>
           <a routerLink="/analysis"    routerLinkActive="active" class="nav-link">
-            <span class="nav-icon">🤖</span><span class="nav-label">ML Analysis</span>
+            <span class="nav-label">ML Analysis</span>
           </a>
-          <a routerLink="/ai-assistant" routerLinkActive="active" class="nav-link">
-            <span class="nav-icon">💬</span><span class="nav-label">AI Assistant</span>
+
+          <div class="nav-section-label">Analytics</div>
+
+          <a routerLink="/heatmap"       routerLinkActive="active" class="nav-link">
+            <span class="nav-label">Heatmap</span>
+          </a>
+          <a routerLink="/entities"      routerLinkActive="active" class="nav-link">
+            <span class="nav-label">Entity Risk</span>
+          </a>
+          <a routerLink="/attack-chains" routerLinkActive="active" class="nav-link">
+            <span class="nav-label">Attack Chains</span>
+          </a>
+          <a routerLink="/reports"       routerLinkActive="active" class="nav-link">
+            <span class="nav-label">Reports</span>
+          </a>
+          <a routerLink="/alert-rules"   routerLinkActive="active" class="nav-link">
+            <span class="nav-label">Alert Rules</span>
           </a>
         </div>
 
@@ -55,15 +68,15 @@ import { WebSocketService } from './core/services/websocket.service';
     </div>
   `,
   styles: [`
-    /* Layout */
-    .layout { display: flex; min-height: 100vh; background: #f8fafc; }
+    /* ── Layout ─────────────────────────────────────────────────── */
+    .layout { display: flex; min-height: 100vh; background: #f5f6fa; }
 
-    /* Sidebar */
+    /* ── Sidebar ─────────────────────────────────────────────────── */
     .sidenav {
-      width: 218px;
+      width: 220px;
       min-height: 100vh;
       background: #ffffff;
-      border-right: 1px solid #e2e8f0;
+      border-right: 1px solid #e8eaf0;
       display: flex;
       flex-direction: column;
       position: sticky;
@@ -71,102 +84,109 @@ import { WebSocketService } from './core/services/websocket.service';
       height: 100vh;
       overflow-y: auto;
       flex-shrink: 0;
-      box-shadow: 2px 0 8px rgba(15,23,42,.04);
+      box-shadow: 4px 0 20px -4px rgba(13,17,23,.06);
     }
 
-    /* Brand */
+    /* ── Brand ───────────────────────────────────────────────────── */
     .nav-brand {
       display: flex;
       align-items: center;
-      gap: 0.65rem;
-      padding: 1.15rem 1.25rem 1rem;
-      border-bottom: 1px solid #f1f5f9;
+      gap: 0.7rem;
+      padding: 1.2rem 1.25rem 1.1rem;
+      border-bottom: 1px solid #f2f3f8;
     }
-    .brand-icon {
-      font-size: 1.35rem;
-      background: linear-gradient(135deg,#4f46e5,#7c3aed);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    .brand-name {
-      font-size: 1rem; font-weight: 800; letter-spacing: -0.03em;
-      background: linear-gradient(135deg,#0f172a 0%,#4f46e5 100%);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+.brand-name {
+      font-size: 0.93rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: #0d1117;
+      -webkit-background-clip: initial;
+      -webkit-text-fill-color: initial;
+      background-clip: initial;
+      background: none;
     }
 
-    /* Nav links */
-    .nav-links { display: flex; flex-direction: column; gap: 0.2rem; padding: 0.85rem 0.65rem; flex: 1; }
+    /* ── Nav links ───────────────────────────────────────────────── */
+    .nav-section-label {
+      font-size: 0.62rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #9ca3af;
+      padding: 0.6rem 0.85rem 0.15rem;
+    }
+    .nav-links { display: flex; flex-direction: column; gap: 0.1rem; padding: 0.9rem 0.7rem; flex: 1; }
     .nav-link {
       display: flex;
       align-items: center;
-      gap: 0.7rem;
-      padding: 0.6rem 0.8rem;
-      border-radius: 10px;
-      color: #64748b;
-      font-size: 0.875rem;
+      gap: 0.65rem;
+      padding: 0.55rem 0.85rem;
+      border-radius: 9px;
+      color: #5a6a85;
+      font-size: 0.845rem;
       font-weight: 500;
       text-decoration: none;
-      transition: background 0.13s, color 0.13s;
+      transition: background 0.12s, color 0.12s;
       position: relative;
+      letter-spacing: 0.003em;
     }
-    .nav-link:hover { background: #f1f5f9; color: #0f172a; text-decoration: none; }
+    .nav-link:hover { background: #f5f6fa; color: #0d1117; text-decoration: none; }
     .nav-link.active {
-      background: linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);
-      color: #4f46e5; font-weight: 700;
-      box-shadow: inset 0 0 0 1px #c7d2fe;
+      background: #eef2ff;
+      color: #4f46e5;
+      font-weight: 600;
     }
-    .nav-icon { font-size: 1.05rem; flex-shrink: 0; }
+    .nav-link.active::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 20%;
+      bottom: 20%;
+      width: 3px;
+      background: #4f46e5;
+      border-radius: 0 2px 2px 0;
+    }
     .nav-label { flex: 1; }
 
-    /* Alert badge */
+    /* ── Alert badge ─────────────────────────────────────────────── */
     .nav-badge {
       background: #dc2626; color: #fff;
-      font-size: 0.65rem; font-weight: 800;
+      font-size: 0.63rem; font-weight: 800;
       padding: 0.1rem 0.4rem; border-radius: 999px;
       min-width: 18px; text-align: center;
       box-shadow: 0 0 0 2px #fff;
       animation: badge-pulse 2s ease-in-out infinite;
     }
-    @keyframes badge-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.75;transform:scale(.92)} }
+    @keyframes badge-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.78;transform:scale(.93)} }
 
-    /* Footer */
+    /* ── Footer ──────────────────────────────────────────────────── */
     .nav-footer {
-      padding: 0.85rem 1rem;
-      border-top: 1px solid #f1f5f9;
-      background: #fafafa;
+      padding: 0.9rem 1rem;
+      border-top: 1px solid #f2f3f8;
     }
     .ws-pill {
       display: flex; align-items: center; gap: 0.45rem;
-      font-size: 0.72rem; color: #94a3b8;
-      padding: 0.35rem 0.7rem; border-radius: 999px;
-      background: #f1f5f9; border: 1px solid #e2e8f0;
+      font-size: 0.71rem; color: #9ca3af;
+      padding: 0.32rem 0.7rem; border-radius: 999px;
+      background: #f8f9fc; border: 1px solid #e8eaf0;
       width: fit-content; font-weight: 500;
     }
     .ws-pill.ws-live { color: #059669; background: #f0fdf4; border-color: #86efac; }
-    .ws-dot { width: 7px; height: 7px; border-radius: 50%; background: #cbd5e1; }
+    .ws-dot { width: 6px; height: 6px; border-radius: 50%; background: #d1d5db; flex-shrink: 0; }
     .ws-pill.ws-live .ws-dot {
       background: #059669;
-      box-shadow: 0 0 0 3px rgba(5,150,105,.2);
+      box-shadow: 0 0 0 3px rgba(5,150,105,.15);
       animation: dot-pulse 1.5s ease-in-out infinite;
     }
-    @keyframes dot-pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+    @keyframes dot-pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
-    /* Main */
+    /* ── Main ────────────────────────────────────────────────────── */
     .main { flex: 1; padding: 1.75rem 2rem; overflow: hidden; min-width: 0; }
 
-    /* Responsive */
+    /* ── Responsive ──────────────────────────────────────────────── */
     @media (max-width: 768px) {
-      .sidenav { width: 60px; }
-      .brand-name, .nav-label, .ws-pill span:last-child { display: none; }
-      .nav-brand { justify-content: center; padding: 1rem 0.5rem; }
-      .brand-icon { font-size: 1.4rem; }
-      .nav-link { justify-content: center; padding: 0.65rem; gap: 0; }
-      .nav-icon { font-size: 1.2rem; }
-      .nav-badge { position: absolute; top: 3px; right: 3px; }
-      .nav-footer { padding: 0.5rem; display: flex; justify-content: center; background: none; }
-      .ws-pill { padding: 0.35rem; border-radius: 50%; }
-      .ws-dot { width: 9px; height: 9px; }
+      .sidenav { width: 164px; }
+      .brand-name { font-size: 0.83rem; }
       .main { padding: 1.25rem; }
     }
   `],

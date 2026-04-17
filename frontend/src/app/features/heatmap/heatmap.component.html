@@ -1,0 +1,102 @@
+<div class="heatmap-page">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1>Anomaly Heatmap</h1>
+      <p class="subtitle">Attack timing patterns across recent events by hour and day</p>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="state-center">
+    <div class="spinner"></div>
+    <span class="state-label">Loading heatmap data…</span>
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="!loading && error" class="error-banner">
+    <span class="error-icon">⚠</span>
+    <span>{{ error }}</span>
+  </div>
+
+  <!-- Content -->
+  <ng-container *ngIf="!loading && !error">
+
+    <!-- Stats row -->
+    <div class="stats-row">
+      <div class="stat-chip">
+        <span class="stat-value">{{ totalAnomalies | number }}</span>
+        <span class="stat-label">Total Anomalies</span>
+      </div>
+      <div class="stat-chip">
+        <span class="stat-value">{{ peakHour }}:00</span>
+        <span class="stat-label">Peak Hour</span>
+      </div>
+      <div class="stat-chip">
+        <span class="stat-value">{{ peakDay }}</span>
+        <span class="stat-label">Peak Day</span>
+      </div>
+      <div class="stat-chip">
+        <span class="stat-value">{{ sampleSize | number }}</span>
+        <span class="stat-label">Sample Size</span>
+      </div>
+    </div>
+
+    <!-- Hover tooltip bar -->
+    <div class="hover-bar" [class.hover-bar-visible]="hoveredCell !== null">
+      <span class="hover-icon">◎</span>
+      <span>{{ hoveredLabel }}</span>
+    </div>
+
+    <!-- Grid card -->
+    <div class="card grid-card">
+      <div class="grid-wrap">
+        <!-- Hour labels -->
+        <div class="hour-labels">
+          <div class="day-label-spacer"></div>
+          <div
+            *ngFor="let h of hours"
+            class="hour-label"
+          >{{ formatHour(h) }}</div>
+        </div>
+
+        <!-- Rows: each day -->
+        <div class="grid-rows">
+          <div
+            *ngFor="let dow of dowOrder; let di = index"
+            class="grid-row"
+          >
+            <div class="day-label">{{ days[di] }}</div>
+            <div
+              *ngFor="let h of hours"
+              class="heat-cell"
+              [style.background]="getCellColor(getCell(dow, h))"
+              [title]="getCell(dow, h) ? (getCell(dow, h)!.anomalies + ' anomalies') : '0 anomalies'"
+              (mouseenter)="onCellEnter(getCell(dow, h), dow, h)"
+              (mouseleave)="onCellLeave()"
+            ></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Legend -->
+      <div class="legend">
+        <span class="legend-label">Less</span>
+        <div class="legend-scale">
+          <div
+            *ngFor="let stop of legendStops"
+            class="legend-cell"
+            [style.background]="stop.color"
+          ></div>
+        </div>
+        <span class="legend-label">More</span>
+        <div class="legend-divider"></div>
+        <div class="legend-stops">
+          <span *ngFor="let stop of legendStops" class="legend-stop-label">{{ stop.label }}</span>
+        </div>
+      </div>
+    </div>
+
+  </ng-container>
+</div>

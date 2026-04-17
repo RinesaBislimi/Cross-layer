@@ -20,7 +20,7 @@ import json
 import logging
 import urllib.error
 import urllib.request
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -314,35 +314,124 @@ def explain_incident(incident: Dict[str, Any], events: List[Dict[str, Any]], db=
     return _call_llm(_SYSTEM_PROMPT, prompt, max_tokens=1024, db=db)
 
 
-def explain_log_event(log: Dict[str, Any], db=None) -> str:
-    """Generate a natural-language explanation for a single anomalous log event."""
-    label_str = "ANOMALY" if log.get("label") == 1 else "normal"
-    features_str = ""
-    if log.get("features"):
-        top = list(log["features"].items())[:10]
-        features_str = "\n".join(f"  {k}: {v}" for k, v in top)
+_SOURCE_CONTEXT = {
+    "bgl": (
+        "BGL (Blue Gene/L) system logs — each record is a kernel/hardware event on a supercomputer node. "
+        "Feature fields capture component IDs, event types, node coordinates, and message severity. "
+        "Anomalies typically represent hardware faults, memory errors (ECC/parity), node failures, "
+        "kernel panics, or thermal events."
+    ),
+    "cicids": (
+        "CICIDS-2017 network flow dataset — each record is a bidirectional TCP/UDP flow summarised "
+        "into statistical features: byte counts, packet counts, inter-arrival times, flag counts, "
+        "flow duration, and derived rates (Bytes/s, Packets/s). "
+        "Anomalies are labelled attack flows including DDoS, DoS, port scans, brute-force, "
+        "botnet C&C, infiltration, and web attacks."
+    ),
+    "tda": (
+        "TDA (Threat Detection Analytics) database-access logs — each record captures a session's "
+        "query behaviour: tables accessed, query types (SELECT/INSERT/DELETE), row counts, "
+        "access frequency, and user/application context. "
+        "Anomalies represent SQL injection attempts, privilege escalation, bulk data exfiltration, "
+        "or unusual access patterns."
+    ),
+}
+
+
+def _source_context(source: str) -> str:
+    key = (source or "").lower().replace("-", "").replace("2017", "")
+    for k, v in _SOURCE_CONTEXT.items():
+        if k in key:
+            return v
+    return f"Source: {source}"
+
+
+def _format_features(features: Dict[str, Any], max_items: int = 20) -> str:
+    """Return features sorted by absolute numeric value (most significant first)."""
+    if not features:
+        return ""
+    numeric = [(k, v) for k, v in features.items() if isinstance(v, (int, float))]
+    numeric.sort(key=lambda x: abs(x[1]), reverse=True)
+    lines = []
+    for k, v in numeric[:max_items]:
+        if isinstance(v, float):
+            lines.append(f"  {k}: {v:.6g}")
+        else:
+            lines.append(f"  {k}: {v:,}")
+    non_numeric = [(k, v) for k, v in features.items() if not isinstance(v, (int, float))]
+    for k, v in non_numeric[:5]:
+        lines.append(f"  {k}: {v}")
+    return "\n".join(lines)
+
+
+def explain_log_event(log: Dict[str, Any], db=None,
+                      extra_signals: Optional[List[str]] = None) -> str:
+    """Generate a pinned, value-specific explanation for a single anomalous log event.
+
+    Unlike a generic analysis, this prompt instructs the LLM to reference the
+    *exact feature values* present in this record and explain why those specific
+    numbers deviate from normal behaviour.
+    """
+    source      = log.get("source", "unknown")
+    layer       = log.get("layer",  "unknown")
+    confidence  = log.get("confidence")
+    raw_text    = str(log.get("raw") or "")[:800]
+    message     = str(log.get("message") or "")[:400]
+    features    = log.get("features") or {}
+    entity      = log.get("entity") or "N/A"
+    timestamp   = log.get("timestamp", "unknown")
+
+    conf_str = f"{round(confidence * 100, 1)}%" if confidence is not None else "unknown"
+    features_str = _format_features(features)
+
+    # Build signal bullet list if provided by the caller
+    signals_str = ""
+    if extra_signals:
+        signals_str = "\n".join(f"  • {s}" for s in extra_signals)
+        signals_str = f"\nPRE-DETECTED HEURISTIC SIGNALS (from rule engine):\n{signals_str}\n"
 
     prompt = (
-        "Analyze this log event that was flagged by the anomaly detection model:\n\n"
-        f"**Log Event:**\n"
-        f"- Layer: {log.get('layer', 'unknown')}\n"
-        f"- Source dataset: {log.get('source', 'unknown')}\n"
-        f"- Timestamp: {log.get('timestamp', 'unknown')}\n"
-        f"- Entity: {log.get('entity', 'N/A')}\n"
-        f"- ML label: {label_str}\n"
-        f"- Confidence: {log.get('confidence', 'N/A')}\n"
-        f"- Message: {str(log.get('message', 'N/A'))[:300]}\n"
+        "You are a cybersecurity analyst. Below is a SINGLE log event that the ML anomaly "
+        "detection model flagged. Your job is to explain exactly WHY THIS SPECIFIC EVENT "
+        "is anomalous by referencing its actual values — do NOT give generic advice.\n\n"
+
+        f"SOURCE CONTEXT:\n{_source_context(source)}\n\n"
+
+        f"EVENT DETAILS:\n"
+        f"  ID        : {log.get('id', '?')}\n"
+        f"  Layer     : {layer}\n"
+        f"  Source    : {source}\n"
+        f"  Timestamp : {timestamp}\n"
+        f"  Entity    : {entity}\n"
+        f"  ML verdict: ANOMALY  (model confidence: {conf_str})\n"
     )
+
+    if raw_text:
+        prompt += f"\nRAW LOG CONTENT:\n  {raw_text}\n"
+    if message and message != raw_text:
+        prompt += f"\nPARSED MESSAGE:\n  {message}\n"
     if features_str:
-        prompt += f"- Features:\n{features_str}\n"
+        prompt += (
+            f"\nFEATURE VALUES (sorted by magnitude — highest = most unusual):\n"
+            f"{features_str}\n"
+        )
+    if signals_str:
+        prompt += signals_str
 
     prompt += (
-        "\nExplain:\n"
-        "1. **Why suspicious** — based on the layer, source, and features\n"
-        "2. **Attack / failure pattern** — what this event typically indicates\n"
-        "3. **Next steps** — what the analyst should investigate next"
+        "\nNow answer these four questions — be SPECIFIC, cite actual values from above:\n\n"
+        "1. **Root cause** — Which exact feature values or keywords make this event anomalous? "
+        "Quote the values and explain why they deviate from normal (e.g. 'Flow Bytes/s of 2.5M "
+        "is ~1000× higher than benign traffic average of ~2K').\n\n"
+        "2. **Attack / failure pattern** — Given these exact indicators, what specific threat or "
+        "failure does this most likely represent? Name the attack type or fault category.\n\n"
+        "3. **Severity verdict** — Rate as Critical / High / Medium / Low with one sentence "
+        "justification tied to the values you saw.\n\n"
+        "4. **Immediate action** — One concrete step the analyst should take RIGHT NOW based on "
+        "this specific event (e.g. 'Block source IP 192.168.x.x', 'Isolate node BG/L-R00-M0-N04')."
     )
-    return _call_llm(_SYSTEM_PROMPT, prompt, max_tokens=768, db=db)
+
+    return _call_llm(_SYSTEM_PROMPT, prompt, max_tokens=900, db=db)
 
 
 def chat(question: str, db=None) -> str:

@@ -91,21 +91,71 @@
           <tr class="detail-row" *ngIf="expandedId === log.id">
             <td colspan="7">
               <div class="detail-panel">
+
+                <!-- ── Anomaly reason block (anomalies only) ─────────────── -->
+                <div class="anomaly-reason-block" *ngIf="log.label === 1">
+                  <div class="reason-header">
+                    <span class="reason-icon">⚠</span>
+                    <span class="reason-title">Why this event was flagged as anomalous</span>
+                  </div>
+
+                  <!-- Confidence score -->
+                  <div class="reason-row" *ngIf="confidencePct(log) !== null">
+                    <span class="reason-label">Model confidence</span>
+                    <div class="conf-bar-wrap">
+                      <div class="conf-bar" [ngClass]="confidenceClass(confidencePct(log)!)"
+                           [style.width.%]="confidencePct(log)"></div>
+                    </div>
+                    <span class="conf-val" [ngClass]="confidenceClass(confidencePct(log)!)">
+                      {{ confidencePct(log) }}% — {{ confidenceLabel(confidencePct(log)!) }}
+                    </span>
+                  </div>
+
+                  <!-- Source-specific heuristic signals -->
+                  <div class="reason-row" *ngIf="anomalySignals(log).length">
+                    <span class="reason-label">Detected signals</span>
+                    <div class="signal-list">
+                      <span class="signal-chip" *ngFor="let s of anomalySignals(log)">⚡ {{ s }}</span>
+                    </div>
+                  </div>
+
+                  <!-- Top contributing features -->
+                  <div class="reason-row" *ngIf="topFeatures(log).length">
+                    <span class="reason-label">Top feature values</span>
+                    <div class="feat-list">
+                      <div class="feat-row" *ngFor="let f of topFeatures(log)">
+                        <span class="feat-name">{{ f.name }}</span>
+                        <span class="feat-val" [ngClass]="'feat-' + f.level">{{ f.value }}</span>
+                        <span class="feat-level" [ngClass]="'feat-' + f.level">{{ f.level }}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+                <!-- ── End anomaly block ──────────────────────────────────── -->
+
+                <!-- Full raw message -->
                 <div class="detail-section">
                   <strong>Full raw message</strong>
                   <pre class="detail-raw">{{ log.raw }}</pre>
                 </div>
+
+                <!-- Features JSON -->
                 <div class="detail-section" *ngIf="log.features">
-                  <strong>Features (stored)</strong>
+                  <strong>Features (stored by ML pipeline)</strong>
                   <pre class="detail-raw">{{ featuresJson(log.features) }}</pre>
                 </div>
+
+                <!-- Metadata pills -->
                 <div class="detail-meta">
                   <span>ID: {{ log.id }}</span>
                   <span>Layer: {{ log.layer }}</span>
                   <span>Source: {{ log.source }}</span>
                   <span>Label: {{ log.label }}</span>
+                  <span *ngIf="log.confidence != null">Confidence: {{ (log.confidence * 100).toFixed(1) }}%</span>
                   <span>Timestamp: {{ formatDate(log.timestamp) }}</span>
                 </div>
+
               </div>
             </td>
           </tr>

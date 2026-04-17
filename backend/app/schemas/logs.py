@@ -14,6 +14,7 @@ class LogEventSchema(BaseModel):
     message: Optional[str] = None
     features: Optional[Dict[str, Any]] = None
     label: Optional[int] = None
+    confidence: Optional[float] = None
 
     class Config:
         from_attributes = True

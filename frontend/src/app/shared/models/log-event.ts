@@ -5,6 +5,8 @@ export interface LogEvent {
   timestamp: string;
   entity: string | null;
   raw: string;
+  message: string | null;
   features: Record<string, unknown> | null;
   label: number | null;
+  confidence: number | null;
 }

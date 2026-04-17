@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from .db import Base, engine, get_db, SessionLocal
 from .models import Incident, LogEvent  # noqa: F401 — register models on Base.metadata
-from .routers import admin
+from .routers import admin, analytics
 from .schemas import IncidentSchema, LogEventSchema
 from .services.correlation import correlate_entity_in_window
 from .ws import realtime
@@ -330,4 +330,5 @@ def get_stats(db: Session = Depends(get_db)) -> dict:
 
 
 app.include_router(admin.router)
+app.include_router(analytics.router)
 app.include_router(realtime.router)

@@ -381,11 +381,14 @@ def api_analyze_incident(
 @router.post("/admin/analyze/log/{log_id}")
 def api_analyze_log(
     log_id: int,
+    body: dict = Body(default={}),
     db: Session = Depends(get_db),
 ) -> dict:
-    """Use Claude to explain why a specific log event was flagged as anomalous.
+    """Use the LLM to explain why a specific log event was flagged as anomalous.
 
-    Requires ANTHROPIC_API_KEY set in environment / .env file.
+    Accepts an optional JSON body: {"signals": ["SYN flood indicator: 72 SYN flags", ...]}
+    These pre-detected heuristic signals are forwarded to the LLM prompt so the
+    explanation is pinned to the exact indicators already shown in the UI.
     """
     from ..services.llm_service import explain_log_event  # lazy import
 
@@ -393,20 +396,24 @@ def api_analyze_log(
     if log is None:
         raise HTTPException(status_code=404, detail=f"Log event {log_id} not found")
 
+    extra_signals: list = body.get("signals") or []
+
     log_data = {
-        "layer": log.layer,
-        "source": log.source,
-        "timestamp": str(log.timestamp),
-        "entity": log.entity,
-        "label": log.label,
+        "id":         log.id,
+        "layer":      log.layer,
+        "source":     log.source,
+        "timestamp":  str(log.timestamp),
+        "entity":     log.entity,
+        "label":      log.label,
         "confidence": log.confidence,
-        "message": log.message,
-        "features": log.features,
-        "raw": (log.raw or "")[:500] if log.raw else None,
+        "message":    log.message,
+        "features":   log.features,
+        # Send full raw text — the LLM prompt already caps it at 800 chars
+        "raw":        log.raw or "",
     }
 
     try:
-        explanation = explain_log_event(log_data, db=db)
+        explanation = explain_log_event(log_data, db=db, extra_signals=extra_signals)
         return {"log_id": log_id, "explanation": explanation}
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
