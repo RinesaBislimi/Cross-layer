@@ -1,0 +1,403 @@
+<div class="analysis-page">
+
+  <!-- Loading overlay -->
+  <div class="overlay" *ngIf="loading">
+    <div class="overlay-box">
+      <div class="spinner-lg"></div>
+      <span>Running pipeline operation…</span>
+    </div>
+  </div>
+
+  <!-- Page header -->
+  <header class="page-header">
+    <div>
+      <h1>ML Analysis Pipeline</h1>
+      <p class="subtitle">Ingest datasets, train models and generate cross-layer incidents</p>
+    </div>
+  </header>
+
+  <!-- Algorithm selector -->
+  <section class="algo-section">
+    <div class="algo-header">
+      <div class="algo-header-left">
+        <span class="algo-title">Choose Algorithm</span>
+        <span class="algo-subtitle">Select the model architecture for anomaly detection</span>
+      </div>
+      <div class="algo-active-pill" *ngIf="selectedAlgo">
+        <span class="algo-active-pill-icon">{{ selectedAlgo.icon }}</span>
+        <span class="algo-active-pill-name">{{ selectedAlgo.label }}</span>
+        <span class="algo-type-tag" [ngClass]="'tag-' + selectedAlgo.type">{{ selectedAlgo.type }}</span>
+      </div>
+    </div>
+
+    <div class="algo-grid">
+      <button *ngFor="let a of algorithms"
+              class="algo-card"
+              [class.algo-active]="modelType === a.value"
+              [ngClass]="'algo-type-' + a.type"
+              [disabled]="loading"
+              (click)="modelType = a.value">
+
+        <div class="algo-body">
+          <div class="algo-name-row">
+            <span class="algo-name">{{ a.label }}</span>
+            <span class="algo-type-tag" [ngClass]="'tag-' + a.type">{{ a.type }}</span>
+          </div>
+          <p class="algo-desc">{{ a.desc }}</p>
+          <div class="algo-pills">
+            <span class="algo-pill" *ngFor="let p of a.tags">{{ p }}</span>
+          </div>
+        </div>
+
+      </button>
+    </div>
+  </section>
+
+  <!-- Step progress bar -->
+  <div class="step-track">
+    <div class="step-node" [class.step-done]="step1Done" [class.step-active]="!step1Done">
+      <div class="step-circle">{{ step1Done ? '✓' : '1' }}</div>
+      <span class="step-label">Ingest</span>
+    </div>
+    <div class="step-line" [class.step-done]="step1Done"></div>
+    <div class="step-node" [class.step-done]="step2Done" [class.step-active]="step1Done && !step2Done">
+      <div class="step-circle">{{ step2Done ? '✓' : '2' }}</div>
+      <span class="step-label">Train</span>
+    </div>
+    <div class="step-line" [class.step-done]="step2Done"></div>
+    <div class="step-node" [class.step-done]="step3Done" [class.step-active]="step2Done && !step3Done">
+      <div class="step-circle">{{ step3Done ? '✓' : '3' }}</div>
+      <span class="step-label">Generate</span>
+    </div>
+  </div>
+
+  <!-- Model status cards -->
+  <section class="card model-status-section">
+    <div class="section-head">
+      <h2>Model Status</h2>
+      <span class="badge-pill">{{ trainedCount }} / {{ totalModels }} trained</span>
+      <button class="btn-sm" (click)="loadModelStatus()" [disabled]="modelStatusLoading">↻ Refresh</button>
+    </div>
+    <div class="model-grid" *ngIf="modelStatuses.length; else noModels">
+      <div class="model-card" *ngFor="let m of modelStatuses" [class.model-trained]="m.trained" [class.model-untrained]="!m.trained">
+        <span class="model-icon">{{ modelIcon(m) }}</span>
+        <div class="model-info">
+          <span class="model-name">{{ m.name }}</span>
+          <span class="model-layer">{{ m.layer }}</span>
+        </div>
+        <span class="model-size">{{ formatKb(m.size_kb) }}</span>
+      </div>
+    </div>
+    <ng-template #noModels>
+      <p class="muted" *ngIf="!modelStatusLoading">No models found. Train a model to start.</p>
+      <div class="loading-row" *ngIf="modelStatusLoading"><div class="spinner"></div> Loading…</div>
+    </ng-template>
+  </section>
+
+  <!-- Step 1: Ingest -->
+  <section class="card step-section" [class.step-section-done]="step1Done">
+    <div class="step-header">
+      <span class="step-badge">Step 1</span>
+      <h2>Ingest Datasets</h2>
+      <span class="step-done-tag" *ngIf="step1Done">✓ Done</span>
+    </div>
+    <p class="step-hint">Load CSV data from disk into the database. Run once before training.</p>
+    <div class="dataset-cards">
+      <div class="dataset-card">
+        <div class="ds-head">
+          <span class="ds-icon">🖥</span>
+          <div>
+            <strong>BGL</strong>
+            <span class="ds-desc">System / kernel logs</span>
+          </div>
+        </div>
+        <button class="btn-action" (click)="ingestBgl()" [disabled]="loading">
+          <span *ngIf="!ingestLoading">▶ Ingest BGL</span>
+          <span *ngIf="ingestLoading"><div class="spinner-sm"></div></span>
+        </button>
+      </div>
+      <div class="dataset-card">
+        <div class="ds-head">
+          <span class="ds-icon">🌐</span>
+          <div>
+            <strong>CICIDS-2017</strong>
+            <span class="ds-desc">Network flow traffic</span>
+          </div>
+        </div>
+        <button class="btn-action" (click)="ingestCicids()" [disabled]="loading">
+          <span *ngIf="!ingestLoading">▶ Ingest CICIDS</span>
+          <span *ngIf="ingestLoading"><div class="spinner-sm"></div></span>
+        </button>
+      </div>
+      <div class="dataset-card">
+        <div class="ds-head">
+          <span class="ds-icon">🗄</span>
+          <div>
+            <strong>TDA</strong>
+            <span class="ds-desc">DB access / application</span>
+          </div>
+        </div>
+        <button class="btn-action" (click)="ingestTda()" [disabled]="loading">
+          <span *ngIf="!ingestLoading">▶ Ingest TDA</span>
+          <span *ngIf="ingestLoading"><div class="spinner-sm"></div></span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Step 2: Train -->
+  <section class="card step-section" [class.step-section-done]="step2Done">
+    <div class="step-header">
+      <span class="step-badge">Step 2</span>
+      <h2>Train Models</h2>
+      <span class="step-done-tag" *ngIf="step2Done">✓ Done</span>
+    </div>
+    <p class="step-hint">Train per-layer anomaly detectors. Results appear in history below.</p>
+    <div class="dataset-cards">
+      <div class="dataset-card">
+        <div class="ds-head">
+          <span class="ds-icon">🖥</span>
+          <div>
+            <strong>BGL</strong>
+            <span class="ds-desc">System layer</span>
+          </div>
+        </div>
+        <button class="btn-action btn-train" (click)="trainBgl()" [disabled]="loading">
+          <span *ngIf="!trainLoading">⚙ Train BGL</span>
+          <span *ngIf="trainLoading"><div class="spinner-sm"></div></span>
+        </button>
+      </div>
+      <div class="dataset-card">
+        <div class="ds-head">
+          <span class="ds-icon">🌐</span>
+          <div>
+            <strong>CICIDS</strong>
+            <span class="ds-desc">Network layer</span>
+          </div>
+        </div>
+        <button class="btn-action btn-train" (click)="trainCicids()" [disabled]="loading">
+          <span *ngIf="!trainLoading">⚙ Train CICIDS</span>
+          <span *ngIf="trainLoading"><div class="spinner-sm"></div></span>
+        </button>
+      </div>
+      <div class="dataset-card">
+        <div class="ds-head">
+          <span class="ds-icon">🗄</span>
+          <div>
+            <strong>TDA</strong>
+            <span class="ds-desc">Application layer</span>
+          </div>
+        </div>
+        <button class="btn-action btn-train" (click)="trainTda()" [disabled]="loading">
+          <span *ngIf="!trainLoading">⚙ Train TDA</span>
+          <span *ngIf="trainLoading"><div class="spinner-sm"></div></span>
+        </button>
+      </div>
+      <div class="dataset-card dataset-card-wide">
+        <div class="ds-head">
+          <span class="ds-icon">🔗</span>
+          <div>
+            <strong>Cross-layer</strong>
+            <span class="ds-desc">Multi-layer correlation model</span>
+          </div>
+        </div>
+        <button class="btn-action btn-train" (click)="trainCrossLayer()" [disabled]="loading">
+          <span *ngIf="!trainLoading">⚙ Train Cross-layer</span>
+          <span *ngIf="trainLoading"><div class="spinner-sm"></div></span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Step 3: Generate -->
+  <section class="card step-section" [class.step-section-done]="step3Done">
+    <div class="step-header">
+      <span class="step-badge">Step 3</span>
+      <h2>Generate Incidents</h2>
+      <span class="step-done-tag" *ngIf="step3Done">✓ Done</span>
+    </div>
+    <p class="step-hint">Correlate anomalies across layers and create incident records.</p>
+    <div class="dataset-cards">
+      <div class="dataset-card dataset-card-wide">
+        <div class="ds-head">
+          <span class="ds-icon">🔗</span>
+          <div>
+            <strong>Cross-layer incidents</strong>
+            <span class="ds-desc">Window-based entity grouping</span>
+          </div>
+        </div>
+        <button class="btn-action btn-generate" (click)="generateCrossLayerIncidents()" [disabled]="loading">
+          <span *ngIf="!generateLoading">⚡ Generate</span>
+          <span *ngIf="generateLoading"><div class="spinner-sm"></div></span>
+        </button>
+      </div>
+      <div class="dataset-card dataset-card-wide">
+        <div class="ds-head">
+          <span class="ds-icon">🤖</span>
+          <div>
+            <strong>ML-scored incidents</strong>
+            <span class="ds-desc">Model probability threshold scoring</span>
+          </div>
+        </div>
+        <button class="btn-action btn-generate" (click)="generateMlIncidents()" [disabled]="loading">
+          <span *ngIf="!generateLoading">⚡ Generate ML</span>
+          <span *ngIf="generateLoading"><div class="spinner-sm"></div></span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Training result panel (shown when history entry selected) -->
+  <section class="card result-panel" *ngIf="selectedEntry && selectedEntry.metricsBySplit">
+    <div class="result-header">
+      <h2>{{ selectedEntry.action }}</h2>
+      <span class="badge-model" *ngIf="selectedEntry.modelType">{{ selectedEntry.modelType.toUpperCase() }}</span>
+      <span class="badge-dataset" *ngIf="selectedEntry.dataset">{{ selectedEntry.dataset }}</span>
+      <button class="btn-close" (click)="selectedEntry = null; _destroyCharts()">✕</button>
+    </div>
+
+    <!-- Training metadata row -->
+    <div class="meta-row" *ngIf="trainMeta(selectedEntry) as tm">
+      <span class="meta-pill">🕒 {{ tm.train_time_s }}s train</span>
+      <span class="meta-pill">📐 {{ tm.n_features }} features</span>
+      <span class="meta-pill">📦 {{ tm.n_train | number }} train rows</span>
+      <span class="meta-pill" *ngIf="tm.roc_auc">AUC {{ tm.roc_auc | number:'1.3-3' }}</span>
+      <span class="meta-pill meta-pill-green" *ngIf="tm.cv_scores">
+        CV F1 {{ tm.cv_scores.f1_mean | number:'1.3-3' }} ± {{ tm.cv_scores.f1_std | number:'1.3-3' }}
+      </span>
+    </div>
+
+    <!-- Cross-validation summary -->
+    <div class="cv-banner" *ngIf="cvScores(selectedEntry) as cv">
+      <span class="cv-title">5-Fold Cross-Validation</span>
+      <div class="cv-metrics">
+        <div class="cv-m"><span>F1</span><strong>{{ cv.f1_mean | number:'1.3-3' }} <em>±{{ cv.f1_std | number:'1.3-3' }}</em></strong></div>
+        <div class="cv-m"><span>AUC</span><strong>{{ cv.auc_mean | number:'1.3-3' }} <em>±{{ cv.auc_std | number:'1.3-3' }}</em></strong></div>
+        <div class="cv-m"><span>Precision</span><strong>{{ cv.precision_mean | number:'1.3-3' }}</strong></div>
+        <div class="cv-m"><span>Recall</span><strong>{{ cv.recall_mean | number:'1.3-3' }}</strong></div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="result-tabs">
+      <button class="result-tab" [class.active]="activeTab==='overview'"  (click)="setTab('overview')">📊 Overview</button>
+      <button class="result-tab" [class.active]="activeTab==='roc'"       (click)="setTab('roc')"      [disabled]="!hasRoc(selectedEntry)">📈 ROC Curve</button>
+      <button class="result-tab" [class.active]="activeTab==='pr'"        (click)="setTab('pr')"       [disabled]="!hasPr(selectedEntry)">📉 PR Curve</button>
+      <button class="result-tab" [class.active]="activeTab==='features'"  (click)="setTab('features')" [disabled]="!hasFeatureImportance(selectedEntry)">🔍 Features</button>
+      <button class="result-tab" [class.active]="activeTab==='threshold'" (click)="setTab('threshold')"[disabled]="!hasThreshold(selectedEntry)">🎛 Threshold</button>
+      <button class="result-tab" [class.active]="activeTab==='report'"    (click)="setTab('report')"   [disabled]="!selectedEntry.report">📋 Report</button>
+    </div>
+
+    <!-- ── TAB: Overview ── -->
+    <div *ngIf="activeTab === 'overview'">
+      <div class="cm-grid">
+        <ng-container *ngFor="let split of cmSplits(selectedEntry)">
+          <ng-container *ngIf="selectedEntry.metricsBySplit![split] as m">
+            <div class="cm-card">
+              <h3 class="cm-title">{{ split }}
+                <span class="cm-size">n={{ m.n_total }}</span>
+                <span class="cm-balance">+{{ m.n_positive }} / −{{ m.n_negative }}</span>
+              </h3>
+              <div class="cm-stats">
+                <div class="cm-stat cm-tp"><span class="cm-label">TP</span><span class="cm-num">{{ m.tp }}</span></div>
+                <div class="cm-stat cm-fp"><span class="cm-label">FP</span><span class="cm-num">{{ m.fp }}</span></div>
+                <div class="cm-stat cm-fn"><span class="cm-label">FN</span><span class="cm-num">{{ m.fn }}</span></div>
+                <div class="cm-stat cm-tn"><span class="cm-label">TN</span><span class="cm-num">{{ m.tn }}</span></div>
+              </div>
+              <div class="cm-metrics">
+                <div class="cm-row"><span>Precision</span>    <strong>{{ m.precision | number:'1.3-3' }}</strong></div>
+                <div class="cm-row"><span>Recall</span>       <strong>{{ m.recall | number:'1.3-3' }}</strong></div>
+                <div class="cm-row"><span>F1 Score</span>     <strong>{{ m.f1 | number:'1.3-3' }}</strong></div>
+                <div class="cm-row"><span>FPR</span>          <strong>{{ m.false_positive_rate | number:'1.3-3' }}</strong></div>
+                <div class="cm-row"><span>Specificity</span>  <strong>{{ m.specificity | number:'1.3-3' }}</strong></div>
+                <div class="cm-row"><span>Accuracy</span>     <strong>{{ m.accuracy | number:'1.3-3' }}</strong></div>
+                <div class="cm-row"><span>MCC</span>          <strong>{{ m.mcc | number:'1.3-3' }}</strong></div>
+                <div class="cm-row" *ngIf="m.roc_auc"><span>AUC-ROC</span><strong class="cm-auc">{{ m.roc_auc | number:'1.3-3' }}</strong></div>
+              </div>
+            </div>
+          </ng-container>
+        </ng-container>
+      </div>
+      <div class="chart-card">
+        <h3>Metric comparison across splits</h3>
+        <div class="chart-wrapper"><canvas #metricsChart></canvas></div>
+      </div>
+    </div>
+
+    <!-- ── TAB: ROC Curve ── -->
+    <div *ngIf="activeTab === 'roc'" class="curve-tab">
+      <div class="curve-info">
+        <p>The <strong>ROC curve</strong> plots True Positive Rate vs False Positive Rate at every threshold. A model that perfectly separates classes has AUC = 1.0. AUC &gt; 0.90 is excellent for anomaly detection.</p>
+      </div>
+      <div class="chart-wrapper chart-lg"><canvas #rocChart></canvas></div>
+    </div>
+
+    <!-- ── TAB: PR Curve ── -->
+    <div *ngIf="activeTab === 'pr'" class="curve-tab">
+      <div class="curve-info">
+        <p>The <strong>Precision-Recall curve</strong> is more informative than ROC on imbalanced datasets. Average Precision (AP) summarises the curve as a single number. AP = 1.0 is perfect.</p>
+      </div>
+      <div class="chart-wrapper chart-lg"><canvas #prChart></canvas></div>
+    </div>
+
+    <!-- ── TAB: Feature Importance ── -->
+    <div *ngIf="activeTab === 'features'" class="features-tab">
+      <div class="curve-info">
+        <p>Top features ranked by <strong>mean decrease in impurity</strong> (Gini importance). Higher = more useful for classification. Use this to identify which signals drive anomaly detection.</p>
+      </div>
+      <div class="chart-wrapper chart-feat"><canvas #featureChart></canvas></div>
+    </div>
+
+    <!-- ── TAB: Threshold Analysis ── -->
+    <div *ngIf="activeTab === 'threshold'" class="threshold-tab">
+      <div class="curve-info">
+        <p>How <strong>F1, Precision, Recall and FPR</strong> change as you vary the decision threshold from 0.1 to 0.9. Use this to pick the optimal threshold for your use case.</p>
+      </div>
+      <div class="chart-wrapper chart-lg"><canvas #thresholdChart></canvas></div>
+      <table class="thresh-table" *ngIf="selectedEntry.metricsBySplit?.['Test']?.threshold_analysis as rows">
+        <tr><th>Threshold</th><th>Precision</th><th>Recall</th><th>F1</th><th>FPR</th></tr>
+        <tr *ngFor="let r of rows" [class.thresh-best]="r.f1 === bestF1(rows)">
+          <td>{{ r.threshold }}</td><td>{{ r.precision }}</td><td>{{ r.recall }}</td>
+          <td><strong>{{ r.f1 }}</strong></td><td>{{ r.fpr }}</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- ── TAB: Report ── -->
+    <div *ngIf="activeTab === 'report'" class="report-tab">
+      <pre class="report-pre" *ngIf="selectedEntry.report">{{ selectedEntry.report }}</pre>
+    </div>
+
+  </section>
+
+  <!-- History log -->
+  <section class="card history-section" *ngIf="history.length">
+    <div class="history-head">
+      <h2>Operation history</h2>
+      <span class="history-saved-badge">💾 Saved</span>
+      <button class="btn-sm" (click)="clearHistory()">🗑 Clear</button>
+    </div>
+    <div class="history-list">
+      <div class="history-item"
+           *ngFor="let e of history; trackBy: trackById"
+           [class.history-success]="e.status === 'success'"
+           [class.history-error]="e.status === 'error'"
+           [class.history-running]="e.status === 'running'"
+           [class.history-selected]="selectedEntry?.id === e.id"
+           (click)="openEntry(e)">
+        <span class="h-icon">{{ historyIcon(e) }}</span>
+        <div class="h-body">
+          <span class="h-action">{{ e.action }}</span>
+          <span class="h-summary">{{ e.summary }}</span>
+        </div>
+        <div class="h-meta">
+          <span class="h-algo" *ngIf="e.modelType">{{ e.modelType.toUpperCase() }}</span>
+          <span class="h-step">Step {{ e.step }}</span>
+          <span class="h-time">{{ e.timestamp | date:'HH:mm:ss' }}</span>
+        </div>
+        <span class="h-expand" *ngIf="e.metricsBySplit">{{ selectedEntry?.id === e.id ? '▲' : '▼' }}</span>
+      </div>
+    </div>
+  </section>
+
+</div>

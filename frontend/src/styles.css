@@ -1,0 +1,100 @@
+/* ─── Design tokens ────────────────────────────────────────────── */
+:root {
+  /* Backgrounds */
+  --bg:        #f8fafc;   /* page background  */
+  --bg-card:   #ffffff;   /* card surfaces    */
+  --bg-hover:  #f1f5f9;   /* subtle hover / inset areas */
+  --bg-dark:   #f1f5f9;   /* kept for compat – code blocks / darker insets */
+
+  /* Borders */
+  --border:    #e2e8f0;
+
+  /* Typography */
+  --text:       #0f172a;
+  --text-muted: #64748b;
+
+  /* Accent – Indigo */
+  --accent:     #4f46e5;
+  --accent-dim: #6366f1;
+
+  /* Semantic */
+  --success:  #059669;
+  --warning:  #d97706;
+  --danger:   #dc2626;
+
+  /* Elevation */
+  --shadow-xs: 0 1px 2px rgba(15,23,42,.06);
+  --shadow-sm: 0 1px 3px rgba(15,23,42,.08), 0 1px 2px rgba(15,23,42,.04);
+  --shadow:    0 4px 6px -1px rgba(15,23,42,.07), 0 2px 4px -1px rgba(15,23,42,.04);
+  --shadow-md: 0 10px 15px -3px rgba(15,23,42,.08), 0 4px 6px -2px rgba(15,23,42,.04);
+
+  /* Fonts */
+  --font-sans: 'Outfit', 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* ─── Reset & base ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.55;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover { text-decoration: underline; }
+
+code, .mono {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+/* ─── Card component ───────────────────────────────────────────── */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ─── Badge / chip ─────────────────────────────────────────────── */
+.badge {
+  display: inline-block;
+  padding: 0.2em 0.55em;
+  border-radius: 5px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* Layer badges */
+.badge-system      { background: #dcfce7; color: #166534; }
+.badge-network     { background: #dbeafe; color: #1e40af; }
+.badge-application { background: #ede9fe; color: #5b21b6; }
+.badge-security    { background: #fee2e2; color: #991b1b; }
+
+/* Severity badges */
+.badge-critical { background: #fee2e2; color: #991b1b; }
+.badge-high     { background: #ffedd5; color: #9a3412; }
+.badge-medium   { background: #fef9c3; color: #854d0e; }
+.badge-low      { background: #dcfce7; color: #166534; }
+
+/* ─── Scrollbar (light theme) ──────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* ─── Utility ──────────────────────────────────────────────────── */
+.error  { color: var(--danger); }
+.muted  { color: var(--text-muted); }

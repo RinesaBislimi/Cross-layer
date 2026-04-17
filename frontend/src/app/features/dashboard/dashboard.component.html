@@ -1,0 +1,220 @@
+<div class="dashboard">
+
+  <!-- Header -->
+  <header class="page-header">
+    <div>
+      <h1>Cross-Layer Log Analysis</h1>
+      <p class="subtitle">Real-time multi-source anomaly detection</p>
+    </div>
+    <div class="header-actions">
+      <span class="countdown-pill">↻ {{ countdown }}s</span>
+      <button type="button" class="btn-refresh" (click)="refresh()">Refresh now</button>
+    </div>
+  </header>
+
+  <!-- Offline banner -->
+  <div class="alert-banner alert-offline" *ngIf="healthOk === false">
+    <span>⚠</span>
+    <span>Backend offline — start it with: <code>cd backend &amp;&amp; uvicorn app.main:app --reload</code></span>
+  </div>
+
+  <!-- Critical alert banner -->
+  <div class="alert-banner alert-critical" *ngIf="criticalCount > 0 && healthOk">
+    <span class="alert-icon">⚠</span>
+    <strong>{{ criticalCount }} critical incident{{ criticalCount > 1 ? 's' : '' }} detected</strong>
+    <a routerLink="/incidents" class="alert-link">View all →</a>
+  </div>
+
+  <!-- Detection Overview -->
+  <section class="detection-overview">
+
+    <!-- Layer health matrix -->
+    <div class="layer-matrix">
+      <div class="matrix-header">
+        <div>
+          <span class="matrix-title">Layer Detection Health</span>
+          <span class="matrix-sub">Anomaly rate &amp; event volume per source</span>
+        </div>
+        <div class="sys-status-row">
+          <span class="sys-chip" [class.chip-ok]="healthOk === true" [class.chip-warn]="healthOk === false">
+            <span class="chip-dot"></span>
+            API {{ healthOk === true ? 'Online' : healthOk === false ? 'Offline' : '…' }}
+          </span>
+          <span class="sys-chip" [class.chip-ok]="ws.isConnected" [class.chip-warn]="!ws.isConnected">
+            <span class="chip-dot"></span>
+            WS {{ ws.isConnected ? 'Live' : 'Off' }}
+            <button class="chip-clear" *ngIf="liveAlertCount > 0" (click)="clearAlertCount()">
+              {{ liveAlertCount }} ✕
+            </button>
+          </span>
+        </div>
+      </div>
+
+      <!-- Compute stats banner — shown when layer data hasn't been computed yet -->
+      <div class="compute-banner" *ngIf="!stats?.logs_by_layer?.length && healthOk">
+        <span class="compute-icon">📊</span>
+        <span class="compute-text">
+          Layer breakdown not yet computed.
+          <span *ngIf="!statsComputing">Run once to populate layer cards.</span>
+          <span *ngIf="statsComputing">{{ statsComputeMsg }}</span>
+        </span>
+        <button class="btn-compute" [disabled]="statsComputing" (click)="computeLayerStats()">
+          {{ statsComputing ? '⏳ Computing…' : 'Compute now' }}
+        </button>
+      </div>
+      <div class="compute-msg" *ngIf="statsComputeMsg && !statsComputing">{{ statsComputeMsg }}</div>
+
+      <div class="layer-cards-row">
+        <div class="layer-card" *ngFor="let l of layerCards" [ngClass]="'lc-' + l.status">
+          <div class="lc-head">
+            <span class="lc-icon">{{ l.icon }}</span>
+            <span class="lc-badge" [ngClass]="'lcbadge-' + l.status">{{ l.status }}</span>
+          </div>
+          <div class="lc-name">{{ l.label }}</div>
+          <div class="lc-dataset">{{ l.dataset }}</div>
+
+          <div class="lc-numbers">
+            <div class="lc-num">
+              <span class="lc-num-val">{{ l.count | number }}</span>
+              <span class="lc-num-label">events</span>
+            </div>
+            <div class="lc-num">
+              <span class="lc-num-val lc-anom-val">{{ l.anomalies | number }}</span>
+              <span class="lc-num-label">anomalies</span>
+            </div>
+          </div>
+
+          <div class="lc-bar-wrap">
+            <div class="lc-bar" [style.width.%]="l.rate" [ngClass]="'lcbar-' + l.status"></div>
+          </div>
+          <div class="lc-rate-row">
+            <span class="lc-rate">{{ l.rate }}% anomaly rate</span>
+            <span class="lc-share">{{ l.share }}% of data</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Threat panel -->
+    <div class="threat-panel">
+
+      <!-- Threat score ring -->
+      <div class="threat-ring-wrap">
+        <svg viewBox="0 0 80 80" class="threat-ring-svg">
+          <circle cx="40" cy="40" r="32" fill="none" stroke="var(--border)" stroke-width="7"/>
+          <circle cx="40" cy="40" r="32" fill="none"
+                  [attr.stroke]="threatLevel === 'critical' ? '#ef4444' : threatLevel === 'high' ? '#f97316' : threatLevel === 'medium' ? '#f59e0b' : '#10b981'"
+                  stroke-width="7"
+                  stroke-linecap="round"
+                  stroke-dasharray="201"
+                  [attr.stroke-dashoffset]="ringDashOffset"
+                  transform="rotate(-90 40 40)"
+                  style="transition: stroke-dashoffset 0.8s ease, stroke 0.4s ease"/>
+        </svg>
+        <div class="threat-ring-label">
+          <span class="trl-score">{{ threatScore }}</span>
+          <span class="trl-sub">/ 100</span>
+          <span class="trl-level" [ngClass]="'level-' + threatLevel">{{ threatLevel }}</span>
+        </div>
+        <div class="threat-ring-caption">Threat Score</div>
+      </div>
+
+      <!-- Severity breakdown -->
+      <div class="threat-sev">
+        <div class="ts-header">
+          <span class="ts-title">Incidents by severity</span>
+          <span class="ts-total">{{ (stats?.total_incidents ?? 0) | number }} total</span>
+        </div>
+        <div class="ts-empty" *ngIf="!severityRows.length">No incidents recorded</div>
+        <div class="ts-row" *ngFor="let s of severityRows">
+          <span class="ts-dot" [ngClass]="'tdot-' + s.name"></span>
+          <span class="ts-name">{{ s.name }}</span>
+          <div class="ts-bar-track">
+            <div class="ts-bar-fill" [style.width.%]="s.pct" [ngClass]="'tfill-' + s.name"></div>
+          </div>
+          <span class="ts-count">{{ s.count }}</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Main grid: recent logs + recent incidents -->
+  <div class="grid">
+
+    <section class="card section">
+      <div class="section-head">
+        <h2>Recent logs</h2>
+        <a routerLink="/logs" class="link-more">View all →</a>
+      </div>
+      <div class="log-feed" *ngIf="recentLogs.length; else noLogs">
+        <div class="log-item" *ngFor="let log of recentLogs" [class.anomaly]="log.label === 1">
+          <span class="badge badge-{{ log.layer }}">{{ log.layer }}</span>
+          <span class="log-raw">{{ (log.raw || '') | slice:0:90 }}{{ (log.raw?.length ?? 0) > 90 ? '…' : '' }}</span>
+          <span class="anomaly-tag" *ngIf="log.label === 1">⚠ anomaly</span>
+        </div>
+      </div>
+      <ng-template #noLogs>
+        <div class="empty-state">
+          <span class="empty-icon">📋</span>
+          <p>No logs yet.</p>
+        </div>
+      </ng-template>
+    </section>
+
+    <section class="card section">
+      <div class="section-head">
+        <h2>Recent incidents</h2>
+        <a routerLink="/incidents" class="link-more">View all →</a>
+      </div>
+      <div class="incident-feed" *ngIf="recentIncidents.length; else noIncidents">
+        <div class="incident-item" *ngFor="let inc of recentIncidents">
+          <div class="incident-row-top">
+            <span class="badge" [ngClass]="severityClass(inc.severity)">{{ inc.severity || 'N/A' }}</span>
+            <span class="inc-type">{{ inc.type }}</span>
+          </div>
+          <div class="incident-row-bottom">
+            <span class="inc-entity" *ngIf="inc.entity">{{ inc.entity }}</span>
+          </div>
+        </div>
+      </div>
+      <ng-template #noIncidents>
+        <div class="empty-state">
+          <span class="empty-icon">🔍</span>
+          <p>No incidents yet. Generate from ML Analysis.</p>
+        </div>
+      </ng-template>
+    </section>
+
+  </div>
+
+  <!-- Severity breakdown bars -->
+  <section class="card section severity-section" *ngIf="stats && stats.incidents_by_severity.length">
+    <div class="section-head">
+      <h2>Incident severity breakdown</h2>
+    </div>
+    <div class="severity-bars">
+      <div class="sev-row" *ngFor="let s of stats.incidents_by_severity">
+        <span class="sev-label badge" [ngClass]="'badge-' + s.name">{{ s.name }}</span>
+        <div class="sev-bar-track">
+          <div class="sev-bar" [class]="'sev-bar-' + s.name"
+               [style.width.%]="stats!.total_incidents ? (s.count / stats!.total_incidents) * 100 : 0">
+          </div>
+        </div>
+        <span class="sev-count">{{ s.count }}</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Live WS messages -->
+  <section class="card section ws-section" *ngIf="wsMessages.length">
+    <div class="section-head">
+      <h2>🔴 Live events</h2>
+      <span class="live-badge">LIVE</span>
+    </div>
+    <div class="ws-list">
+      <pre class="ws-msg" *ngFor="let msg of wsMessages | slice:0:8">{{ msg | json }}</pre>
+    </div>
+  </section>
+
+</div>

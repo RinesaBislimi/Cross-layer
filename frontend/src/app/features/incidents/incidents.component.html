@@ -1,0 +1,171 @@
+<div class="incidents-page">
+  <header class="page-header">
+    <div>
+      <h1>Cross-layer incidents</h1>
+      <p class="subtitle">Correlated anomalies across system, network and application layers</p>
+    </div>
+    <button type="button" class="btn" (click)="load()">↻ Refresh</button>
+  </header>
+
+  <!-- Severity summary pills -->
+  <div class="severity-summary" *ngIf="allIncidents.length">
+    <button class="sev-pill all-pill" [class.active]="severityFilter===''" (click)="severityFilter=''">
+      All <span class="sev-count">{{ allIncidents.length }}</span>
+    </button>
+    <button *ngFor="let s of severities" class="sev-pill" [class]="'sev-pill-' + s" [class.active]="severityFilter===s"
+            (click)="severityFilter = (severityFilter===s ? '' : s)">
+      {{ s }} <span class="sev-count">{{ countBySeverity(s) }}</span>
+    </button>
+  </div>
+
+  <!-- Search -->
+  <div class="search-wrap card">
+    <span class="search-icon">🔍</span>
+    <input type="text" class="search-input" placeholder="Search entity or incident type…"
+           [(ngModel)]="searchText" />
+    <button *ngIf="searchText" class="clear-btn" (click)="searchText=''">✕</button>
+  </div>
+
+  <p class="error" *ngIf="error">{{ error }}</p>
+  <div class="loading-row" *ngIf="loading"><div class="spinner"></div> Loading incidents…</div>
+
+  <div class="split-layout" *ngIf="!loading && filteredIncidents.length">
+    <!-- List -->
+    <div class="incident-list">
+      <article class="card incident-card" *ngFor="let inc of filteredIncidents"
+               (click)="selectIncident(inc)" [class.selected]="selected?.id === inc.id">
+        <div class="inc-header">
+          <span class="badge" [ngClass]="severityClass(inc.severity)">{{ inc.severity || 'N/A' }}</span>
+          <span class="inc-mode-badge" *ngIf="correlationModeLabel(inc)">{{ correlationModeLabel(inc) }}</span>
+          <span class="inc-duration" *ngIf="inc.end_time">⏱ {{ durationLabel(inc) }}</span>
+        </div>
+
+        <p class="inc-description">{{ descriptionLabel(inc) }}</p>
+
+        <div class="inc-entity" *ngIf="inc.entity">
+          <span class="entity-label">Entity</span>
+          <span class="entity-val">{{ inc.entity }}</span>
+        </div>
+
+        <div class="inc-meta">
+          <div class="layer-chips">
+            <span *ngFor="let l of layersAttr(inc)" class="badge badge-{{ l }}">{{ l }}</span>
+          </div>
+          <span class="event-count">{{ numEventsAttr(inc) }} events</span>
+        </div>
+
+        <div class="inc-score" *ngIf="scoreAttr(inc) !== null">
+          <span class="score-label">ML score</span>
+          <div class="score-bar-track">
+            <div class="score-bar" [style.width.%]="(scoreAttr(inc) ?? 0) * 100"
+                 [class.score-high]="(scoreAttr(inc) ?? 0) >= 0.75"
+                 [class.score-med]="(scoreAttr(inc) ?? 0) < 0.75 && (scoreAttr(inc) ?? 0) >= 0.5"
+                 [class.score-low]="(scoreAttr(inc) ?? 0) < 0.5">
+            </div>
+          </div>
+          <span class="score-val">{{ ((scoreAttr(inc) ?? 0) * 100) | number:'1.0-0' }}%</span>
+        </div>
+      </article>
+    </div>
+
+    <!-- Detail panel -->
+    <aside class="detail-panel card" *ngIf="selected">
+      <div class="detail-header">
+        <h2>Incident detail</h2>
+        <button class="close-btn" (click)="selected = null">✕</button>
+      </div>
+
+      <div class="detail-meta">
+        <div class="meta-row detail-description-row">
+          <p class="detail-description">{{ descriptionLabel(selected) }}</p>
+        </div>
+        <div class="meta-row">
+          <span class="meta-key">Type</span>
+          <span class="meta-val">{{ selected.type }}</span>
+        </div>
+        <div class="meta-row" *ngIf="correlationModeLabel(selected)">
+          <span class="meta-key">Method</span>
+          <span class="meta-val inc-mode-badge">{{ correlationModeLabel(selected) }}</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-key">Severity</span>
+          <span class="badge" [ngClass]="severityClass(selected.severity)">{{ selected.severity || 'N/A' }}</span>
+        </div>
+        <div class="meta-row" *ngIf="selected.entity">
+          <span class="meta-key">Entity</span>
+          <span class="meta-val entity-copyable" (click)="copyEntity(selected.entity)" title="Click to copy">
+            {{ selected.entity }}
+            <span class="copy-hint">{{ copied ? '✓ Copied' : '📋' }}</span>
+          </span>
+        </div>
+        <div class="meta-row" *ngIf="selected.end_time">
+          <span class="meta-key">Duration</span>
+          <span class="meta-val">{{ durationLabel(selected) }}</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-key">Events</span>
+          <span class="meta-val">{{ numEventsAttr(selected) }}</span>
+        </div>
+        <div class="meta-row" *ngIf="layersAttr(selected).length">
+          <span class="meta-key">Layers</span>
+          <div class="meta-val layer-chips">
+            <span *ngFor="let l of layersAttr(selected)" class="badge badge-{{ l }}">{{ l }}</span>
+          </div>
+        </div>
+        <div class="meta-row" *ngIf="scoreAttr(selected) !== null">
+          <span class="meta-key">ML Score</span>
+          <span class="meta-val">{{ ((scoreAttr(selected) ?? 0) * 100) | number:'1.1-1' }}%</span>
+        </div>
+      </div>
+
+      <!-- Timeline -->
+      <div class="timeline-section">
+        <h3>Event timeline</h3>
+        <div class="loading-row" *ngIf="loadingEvents"><div class="spinner"></div> Loading events…</div>
+        <p class="muted" *ngIf="!loadingEvents && !selectedEvents.length">No linked events found.</p>
+
+        <div class="timeline" *ngIf="!loadingEvents && selectedEvents.length">
+          <div *ngFor="let layer of ['system','network','application','security']">
+            <ng-container *ngIf="eventsByLayer(layer).length > 0">
+              <div class="timeline-layer">
+                <span class="tl-label badge badge-{{ layer }}">{{ layer }}</span>
+                <div class="tl-track">
+                  <div class="tl-events">
+                    <span *ngFor="let ev of eventsByLayer(layer)" class="tl-dot"
+                          [class.tl-anomaly]="ev.label === 1"
+                          [title]="formatDate(ev.timestamp) + (ev.label === 1 ? ' [ANOMALY]' : '')">
+                    </span>
+                  </div>
+                </div>
+                <span class="tl-count">{{ eventsByLayer(layer).length }}</span>
+              </div>
+            </ng-container>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Explanation -->
+      <div class="ai-section">
+        <div class="ai-section-head">
+          <h3>AI Analysis</h3>
+          <button class="btn-ai" (click)="explainWithAi(selected)" [disabled]="aiLoading">
+            <span *ngIf="!aiLoading">✦ Explain with Claude</span>
+            <span *ngIf="aiLoading" class="ai-loading-row"><div class="spinner-sm"></div> Analyzing…</span>
+          </button>
+        </div>
+        <div class="ai-error" *ngIf="aiError">{{ aiError }}</div>
+        <pre class="ai-result" *ngIf="aiExplanation">{{ aiExplanation }}</pre>
+      </div>
+
+      <!-- Raw attributes -->
+      <div class="attrs-section" *ngIf="selected.attributes">
+        <h3>Attributes</h3>
+        <pre class="attrs-json">{{ selected.attributes | json }}</pre>
+      </div>
+    </aside>
+  </div>
+
+  <p class="muted" *ngIf="!loading && !error && filteredIncidents.length === 0">
+    No incidents match the current filters.
+  </p>
+</div>

@@ -1,0 +1,37 @@
+{
+  "logs_by_layer": [
+    {
+      "name": "application",
+      "count": 44465997,
+      "anomalies": 763000
+    },
+    {
+      "name": "system",
+      "count": 9815926,
+      "anomalies": 398000
+    },
+    {
+      "name": "network",
+      "count": 2520751,
+      "anomalies": 61255
+    }
+  ],
+  "logs_by_source": [
+    {
+      "name": "TDA",
+      "count": 44465997,
+      "anomalies": 763000
+    },
+    {
+      "name": "BGL",
+      "count": 9815926,
+      "anomalies": 398000
+    },
+    {
+      "name": "CICIDS2017",
+      "count": 2520751,
+      "anomalies": 61255
+    }
+  ],
+  "total_anomalies": 1222255
+}

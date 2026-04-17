@@ -1,0 +1,18 @@
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+SQLAlchemy==2.0.32
+psycopg2-binary==2.9.9
+pgvector==0.2.5
+# MySQL (përdor kur DATABASE_URL fillon me mysql+pymysql://)
+PyMySQL==1.1.0
+cryptography==42.0.0
+pydantic==2.9.2
+pydantic-settings==2.6.1
+python-dotenv==1.0.1
+pandas==2.2.2
+numpy==1.26.4
+scikit-learn==1.5.1
+xgboost==2.1.1
+joblib==1.4.2
+lightgbm==4.5.0
+anthropic>=0.40.0

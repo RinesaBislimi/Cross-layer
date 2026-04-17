@@ -1,0 +1,127 @@
+<div class="logs-page">
+  <header class="page-header">
+    <div>
+      <h1>Logs</h1>
+      <p class="subtitle">Filter, search and inspect events across all layers</p>
+    </div>
+    <button type="button" class="btn" (click)="load()">↻ Refresh</button>
+  </header>
+
+  <!-- Stats row -->
+  <div class="stats-row" *ngIf="allLogs.length">
+    <span class="stat-chip">Total: <strong>{{ allLogs.length }}</strong></span>
+    <span class="stat-chip anomaly-chip">Anomalies: <strong>{{ anomalyCount }}</strong></span>
+    <span class="stat-chip normal-chip">Normal: <strong>{{ normalCount }}</strong></span>
+    <span class="stat-chip muted-chip" *ngIf="filteredLogs.length !== allLogs.length">Filtered: <strong>{{ filteredLogs.length }}</strong></span>
+  </div>
+
+  <!-- Filters card -->
+  <div class="filters card">
+    <!-- Search -->
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" class="search-input" placeholder="Search raw text, entity, source…"
+             [(ngModel)]="searchText" (ngModelChange)="onFilterChange()" />
+      <button *ngIf="searchText" class="clear-btn" (click)="searchText=''; onFilterChange()">✕</button>
+    </div>
+
+    <!-- Dropdowns -->
+    <label>
+      Layer
+      <select [(ngModel)]="layerFilter" (ngModelChange)="load()">
+        <option value="">All</option>
+        <option *ngFor="let l of layers" [value]="l">{{ l }}</option>
+      </select>
+    </label>
+    <label>
+      Source
+      <select [(ngModel)]="sourceFilter" (ngModelChange)="load()">
+        <option value="">All</option>
+        <option *ngFor="let s of sources" [value]="s">{{ s }}</option>
+      </select>
+    </label>
+    <label>
+      Fetch limit
+      <input type="number" [(ngModel)]="limit" (change)="load()" min="50" max="5000" step="50" />
+    </label>
+
+    <!-- Anomaly filter chips -->
+    <div class="chip-group">
+      <button class="chip" [class.active]="anomalyFilter==='all'" (click)="anomalyFilter='all'; onFilterChange()">All</button>
+      <button class="chip chip-anomaly" [class.active]="anomalyFilter==='anomaly'" (click)="anomalyFilter='anomaly'; onFilterChange()">⚠ Anomalies</button>
+      <button class="chip chip-normal" [class.active]="anomalyFilter==='normal'" (click)="anomalyFilter='normal'; onFilterChange()">✓ Normal</button>
+    </div>
+  </div>
+
+  <p class="error" *ngIf="error">{{ error }}</p>
+  <div class="loading-row" *ngIf="loading">
+    <div class="spinner"></div> Loading logs…
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap card" *ngIf="!loading && pagedLogs.length">
+    <table class="log-table">
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Layer</th>
+          <th>Source</th>
+          <th>Entity</th>
+          <th>Message</th>
+          <th>Label</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngFor="let log of pagedLogs">
+          <tr [class.row-anomaly]="log.label === 1" [class.row-expanded]="expandedId === log.id" (click)="toggleExpand(log.id)">
+            <td class="mono time">{{ formatDate(log.timestamp) }}</td>
+            <td><span class="badge badge-{{ log.layer }}">{{ log.layer }}</span></td>
+            <td>{{ log.source }}</td>
+            <td class="entity">{{ log.entity || '—' }}</td>
+            <td class="raw">{{ (log.raw || '') | slice:0:120 }}{{ (log.raw?.length ?? 0) > 120 ? '…' : '' }}</td>
+            <td>
+              <span class="label-badge" [class.label-anomaly]="log.label === 1" [class.label-normal]="log.label !== 1">
+                {{ log.label === 1 ? '⚠ ANOMALY' : '✓ NORMAL' }}
+              </span>
+            </td>
+            <td class="expand-col">{{ expandedId === log.id ? '▲' : '▼' }}</td>
+          </tr>
+          <!-- Expanded details row -->
+          <tr class="detail-row" *ngIf="expandedId === log.id">
+            <td colspan="7">
+              <div class="detail-panel">
+                <div class="detail-section">
+                  <strong>Full raw message</strong>
+                  <pre class="detail-raw">{{ log.raw }}</pre>
+                </div>
+                <div class="detail-section" *ngIf="log.features">
+                  <strong>Features (stored)</strong>
+                  <pre class="detail-raw">{{ featuresJson(log.features) }}</pre>
+                </div>
+                <div class="detail-meta">
+                  <span>ID: {{ log.id }}</span>
+                  <span>Layer: {{ log.layer }}</span>
+                  <span>Source: {{ log.source }}</span>
+                  <span>Label: {{ log.label }}</span>
+                  <span>Timestamp: {{ formatDate(log.timestamp) }}</span>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </ng-container>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination" *ngIf="totalPages > 1">
+    <button class="btn-page" (click)="prevPage()" [disabled]="currentPage === 0">← Prev</button>
+    <span class="page-info">Page {{ currentPage + 1 }} / {{ totalPages }}</span>
+    <button class="btn-page" (click)="nextPage()" [disabled]="currentPage >= totalPages - 1">Next →</button>
+  </div>
+
+  <p class="muted" *ngIf="!loading && !error && pagedLogs.length === 0">
+    No logs match the current filters.
+  </p>
+</div>

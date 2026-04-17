@@ -1,0 +1,162 @@
+<div class="stats-page">
+
+  <header class="page-header">
+    <div>
+      <h1>Statistics &amp; Graphs</h1>
+      <p class="subtitle">Real-time analytics from ingested log events and generated incidents</p>
+    </div>
+    <div class="header-right">
+      <span class="live-dot" [class.live]="ws.isConnected">{{ ws.isConnected ? '● Live' : '○ Offline' }}</span>
+      <button class="btn" (click)="load()">↻ Refresh</button>
+    </div>
+  </header>
+
+  <div class="error-box" *ngIf="error">
+    <span>⚠ {{ error }}</span>
+    <button class="btn btn-sm" (click)="load()">↻ Retry</button>
+  </div>
+
+  <div class="loading-row" *ngIf="loading">
+    <div class="spinner"></div> Loading statistics…
+  </div>
+
+  <div class="empty-state" *ngIf="!loading && !error && stats && stats.total_logs === 0">
+    <div class="empty-icon">📂</div>
+    <p class="empty-title">No data yet</p>
+    <p class="empty-sub">Go to <strong>ML Analysis</strong> → Step 1 and ingest a dataset first.</p>
+  </div>
+
+  <ng-container *ngIf="!loading && stats && stats.total_logs > 0">
+
+    <!-- KPI row -->
+    <section class="kpi-row">
+      <div class="kpi-card">
+        <div class="kpi-icon kpi-blue">📋</div>
+        <div class="kpi-body">
+          <span class="kpi-value">{{ stats.total_logs | number }}</span>
+          <span class="kpi-label">Total log events</span>
+        </div>
+      </div>
+      <div class="kpi-card" [class.kpi-danger]="anomalyRate > 30">
+        <div class="kpi-icon kpi-red">⚠</div>
+        <div class="kpi-body">
+          <span class="kpi-value">{{ stats.total_anomalies | number }}</span>
+          <span class="kpi-label">Anomalous events</span>
+          <span class="kpi-sub">{{ anomalyRate }}% of total</span>
+          <div class="kpi-bar-wrap"><div class="kpi-bar kpi-bar-red" [style.width.%]="anomalyRate"></div></div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon kpi-orange">🚨</div>
+        <div class="kpi-body">
+          <span class="kpi-value">{{ stats.total_incidents | number }}</span>
+          <span class="kpi-label">Total incidents</span>
+        </div>
+      </div>
+      <div class="kpi-card" [class.kpi-danger]="criticalHighRate > 50">
+        <div class="kpi-icon kpi-purple">📊</div>
+        <div class="kpi-body">
+          <span class="kpi-value">{{ criticalHighRate }}%</span>
+          <span class="kpi-label">High / Critical</span>
+          <div class="kpi-bar-wrap"><div class="kpi-bar kpi-bar-orange" [style.width.%]="criticalHighRate"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Incident charts (severity + detection method) -->
+    <div class="charts-grid" *ngIf="stats.total_incidents > 0">
+      <section class="card chart-card">
+        <h2>Incidents by severity</h2>
+        <div class="chart-wrap"><canvas #chartSeverity></canvas></div>
+      </section>
+      <section class="card chart-card">
+        <h2>Incidents by detection method</h2>
+        <div class="chart-wrap"><canvas #chartMode></canvas></div>
+      </section>
+    </div>
+
+    <!-- Log volume charts (only when layer/source data is available) -->
+    <div class="charts-grid" *ngIf="stats.logs_by_layer?.length">
+      <section class="card chart-card">
+        <h2>
+          Log volume by layer
+          <span class="chart-legend"><span class="dot dot-blue"></span>Normal&nbsp;<span class="dot dot-red"></span>Anomaly</span>
+        </h2>
+        <div class="chart-wrap chart-tall"><canvas #chartLayerVolume></canvas></div>
+      </section>
+      <section class="card chart-card">
+        <h2>
+          Log volume by source
+          <span class="chart-legend"><span class="dot" style="background:#22c55e"></span>Normal&nbsp;<span class="dot" style="background:#f97316"></span>Anomaly</span>
+        </h2>
+        <div class="chart-wrap chart-tall"><canvas #chartSourceVol></canvas></div>
+      </section>
+    </div>
+
+    <!-- Anomaly rate + Incident timeline -->
+    <div class="charts-grid" *ngIf="stats.logs_by_layer?.length || recentIncidents.length > 1">
+      <section class="card chart-card" *ngIf="stats.logs_by_layer?.length">
+        <h2>Anomaly rate by layer</h2>
+        <div class="chart-wrap"><canvas #chartAnomalyRate></canvas></div>
+      </section>
+      <section class="card chart-card" *ngIf="recentIncidents.length > 1">
+        <h2>Incident timeline <span class="table-sub">by day</span></h2>
+        <div class="chart-wrap"><canvas #chartTimeline></canvas></div>
+      </section>
+    </div>
+
+    <!-- Tabs -->
+    <div class="stat-tabs">
+      <button class="stat-tab" [class.active]="activeTab==='incidents'" (click)="setTab('incidents')">
+        🚨 Recent Incidents <span class="tab-count" *ngIf="recentIncidents.length">{{ recentIncidents.length }}</span>
+      </button>
+      <button class="stat-tab" [class.active]="activeTab==='logs'" (click)="setTab('logs')">
+        📋 Recent Logs <span class="tab-count" *ngIf="recentLogs.length">{{ recentLogs.length }}</span>
+      </button>
+    </div>
+
+    <!-- Incidents table -->
+    <section class="card table-card" *ngIf="activeTab === 'incidents'">
+      <h2>Recent incidents <span class="table-sub">last {{ recentIncidents.length }} records</span></h2>
+      <div class="empty-state" *ngIf="!recentIncidents.length">
+        <div class="empty-icon">🚨</div>
+        <p class="empty-title">No incidents yet</p>
+        <p class="empty-sub">Go to <strong>ML Analysis</strong> → Step 3 to generate incidents.</p>
+      </div>
+      <table class="data-table" *ngIf="recentIncidents.length">
+        <thead><tr><th>#</th><th>Entity</th><th>Type</th><th>Severity</th><th>Method</th><th>Start time</th><th>Events</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let inc of recentIncidents">
+            <td class="mono muted">{{ inc.id }}</td>
+            <td><span class="entity-chip">{{ inc.entity || '—' }}</span></td>
+            <td class="mono">{{ inc.type }}</td>
+            <td><span class="sev-badge" [ngClass]="severityColor(inc.severity)">{{ inc.severity || 'unknown' }}</span></td>
+            <td class="mono muted">{{ incidentAttr(inc, 'generated_from') }}</td>
+            <td class="mono muted">{{ inc.start_time | date:'yyyy-MM-dd HH:mm' }}</td>
+            <td class="mono">{{ inc.events?.length ?? 0 }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Logs table -->
+    <section class="card table-card" *ngIf="activeTab === 'logs'">
+      <h2>Recent log events <span class="table-sub">last {{ recentLogs.length }} records</span></h2>
+      <table class="data-table" *ngIf="recentLogs.length">
+        <thead><tr><th>#</th><th>Layer</th><th>Source</th><th>Label</th><th>Timestamp</th><th>Raw (preview)</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let log of recentLogs" [class.row-anomaly]="log.label === 1">
+            <td class="mono muted">{{ log.id }}</td>
+            <td><span class="badge badge-{{ log.layer }}">{{ log.layer }}</span></td>
+            <td><span class="source-badge">{{ log.source }}</span></td>
+            <td><span class="label-badge" [class.label-anom]="log.label === 1" [class.label-norm]="log.label === 0">{{ log.label === 1 ? 'Anomaly' : log.label === 0 ? 'Normal' : '—' }}</span></td>
+            <td class="mono muted">{{ log.timestamp | date:'yyyy-MM-dd HH:mm:ss' }}</td>
+            <td class="raw-preview">{{ log.raw | slice:0:80 }}{{ (log.raw?.length ?? 0) > 80 ? '…' : '' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+  </ng-container>
+
+</div>

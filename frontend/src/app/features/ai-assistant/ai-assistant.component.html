@@ -1,0 +1,167 @@
+<div class="ai-layout">
+
+  <!-- ── Sidebar ─────────────────────────────────────────────────── -->
+  <aside class="chat-sidebar">
+
+    <div class="sidebar-brand">
+      <span class="sidebar-logo">🤖</span>
+      <span class="sidebar-name">AI Assistant</span>
+    </div>
+
+    <button class="btn-new-chat" (click)="newChat()">
+      <span class="btn-new-icon">＋</span> New chat
+    </button>
+
+    <div class="sidebar-sessions">
+
+      <!-- Today -->
+      <ng-container *ngIf="todaySessions.length">
+        <span class="session-group-label">Today</span>
+        <button class="session-item"
+                *ngFor="let s of todaySessions"
+                [class.session-active]="s.id === currentSessionId"
+                (click)="loadSession(s)">
+          <span class="session-icon">💬</span>
+          <span class="session-title">{{ sessionTitle(s) }}</span>
+          <button class="session-delete" (click)="deleteSession(s.id, $event)" title="Delete">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+        </button>
+      </ng-container>
+
+      <!-- Yesterday -->
+      <ng-container *ngIf="yesterdaySessions.length">
+        <span class="session-group-label">Yesterday</span>
+        <button class="session-item"
+                *ngFor="let s of yesterdaySessions"
+                [class.session-active]="s.id === currentSessionId"
+                (click)="loadSession(s)">
+          <span class="session-icon">💬</span>
+          <span class="session-title">{{ sessionTitle(s) }}</span>
+          <button class="session-delete" (click)="deleteSession(s.id, $event)" title="Delete">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+        </button>
+      </ng-container>
+
+      <!-- Older -->
+      <ng-container *ngIf="olderSessions.length">
+        <span class="session-group-label">Previous</span>
+        <button class="session-item"
+                *ngFor="let s of olderSessions"
+                [class.session-active]="s.id === currentSessionId"
+                (click)="loadSession(s)">
+          <span class="session-icon">💬</span>
+          <span class="session-title">{{ sessionTitle(s) }}</span>
+          <button class="session-delete" (click)="deleteSession(s.id, $event)" title="Delete">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+        </button>
+      </ng-container>
+
+      <!-- Empty state -->
+      <div class="sidebar-empty" *ngIf="!sessions.length">
+        <span>No conversations yet</span>
+      </div>
+
+    </div>
+
+    <!-- Sidebar footer -->
+    <div class="sidebar-footer" *ngIf="sessions.length">
+      <button class="btn-clear-all" (click)="clearAllSessions()">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 3h9M5 3V2h3v1M3.5 3l.5 8h5l.5-8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Clear all chats
+      </button>
+    </div>
+
+  </aside>
+
+  <!-- ── Main chat area ───────────────────────────────────────────── -->
+  <div class="chat-main">
+
+    <!-- Top bar -->
+    <header class="chat-topbar">
+      <span class="chat-topbar-title" *ngIf="currentSessionId">
+        {{ activeTitle }}
+      </span>
+      <span class="chat-topbar-title" *ngIf="!currentSessionId">New conversation</span>
+      <span class="provider-badge"
+            [class.provider-openai]="chatProvider === 'openai'"
+            [class.provider-claude]="chatProvider === 'anthropic'"
+            [class.provider-gemini]="chatProvider === 'gemini'"
+            [class.provider-groq]="chatProvider === 'groq'"
+            [class.provider-ollama]="chatProvider === 'ollama'"
+            [class.provider-local]="chatProvider === 'local'"
+            *ngIf="chatProvider">
+        {{ providerLabel }}
+      </span>
+    </header>
+
+    <!-- Chat body -->
+    <div class="chat-body">
+
+      <!-- Suggestions -->
+      <div class="suggestions" *ngIf="!chatMessages.length">
+        <div class="welcome-block">
+          <div class="welcome-icon">🤖</div>
+          <h2 class="welcome-title">How can I help you?</h2>
+          <p class="welcome-sub">Ask anything about your datasets, anomalies, incidents, or ML models.</p>
+        </div>
+        <div class="suggest-chips">
+          <button class="chip" (click)="chatQuestion = 'What does a high false positive rate mean?'; sendChat()">What does a high false positive rate mean?</button>
+          <button class="chip" (click)="chatQuestion = 'Explain BGL anomalies.'; sendChat()">Explain BGL anomalies</button>
+          <button class="chip" (click)="chatQuestion = 'How does cross-layer correlation work?'; sendChat()">How does cross-layer correlation work?</button>
+          <button class="chip" (click)="chatQuestion = 'What is the difference between precision and recall?'; sendChat()">Precision vs recall</button>
+          <button class="chip" (click)="chatQuestion = 'What are CICIDS2017 network attacks?'; sendChat()">CICIDS2017 network attacks</button>
+          <button class="chip" (click)="chatQuestion = 'How should I interpret a low F1 score?'; sendChat()">Low F1 score interpretation</button>
+        </div>
+      </div>
+
+      <!-- Messages -->
+      <div class="chat-history" #chatHistory *ngIf="chatMessages.length">
+        <div *ngFor="let msg of chatMessages; let last = last"
+             class="chat-msg"
+             [class.chat-msg-user]="msg.role === 'user'"
+             [class.chat-msg-ai]="msg.role === 'ai'">
+          <div class="chat-avatar">
+            <span *ngIf="msg.role === 'user'">You</span>
+            <span *ngIf="msg.role === 'ai'">AI</span>
+          </div>
+          <div class="chat-bubble">
+            <!-- Thinking dots: last AI message, still loading, no text yet -->
+            <div class="chat-text chat-thinking"
+                 *ngIf="msg.role === 'ai' && last && chatLoading && !msg.text">
+              <span class="dot-flashing"></span>
+            </div>
+            <!-- Normal content -->
+            <div class="chat-text"
+                 *ngIf="!(msg.role === 'ai' && last && chatLoading && !msg.text)"
+                 [innerHTML]="msg.html || msg.text"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Input -->
+    <div class="chat-input-wrap">
+      <div class="chat-input-box">
+        <input
+          class="chat-input"
+          type="text"
+          [(ngModel)]="chatQuestion"
+          placeholder="Message AI Assistant…"
+          [disabled]="chatLoading"
+          (keydown.enter)="sendChat()" />
+        <button class="btn-send" (click)="sendChat()" [disabled]="chatLoading || !chatQuestion.trim()">
+          <svg *ngIf="!chatLoading" width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M8 13V3M8 3L3 8M8 3l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div *ngIf="chatLoading" class="spinner-sm"></div>
+        </button>
+      </div>
+      <p class="chat-input-hint">AI responses may be inaccurate. Verify critical information.</p>
+    </div>
+
+  </div>
+</div>
