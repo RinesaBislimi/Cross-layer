@@ -1,4 +1,4 @@
-"""Analytics endpoints: heatmap, entity risk, attack chains, report summary.
+"""Analytics endpoints: heatmap, entity risk, attack chains, report summary, email alerts.
 
 Schema notes (incidents table):
   - `type`       — incident type string  (NOT `incident_type`)
@@ -11,13 +11,18 @@ Schema notes (incidents table):
 
 import json
 import logging
+import smtplib
 from datetime import datetime
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from typing import Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
+from ..config import get_settings
 from ..db import get_db
 
 logger = logging.getLogger(__name__)
@@ -341,3 +346,91 @@ def get_report_summary(db: Session = Depends(get_db)):
     except Exception as exc:
         logger.error("report-summary failed: %s", exc)
         return {"error": str(exc), "generated_at": datetime.utcnow().isoformat()}
+
+
+# ── Alert email sender ────────────────────────────────────────────────────────
+
+class SendEmailRequest(BaseModel):
+    to: str           # recipient email
+    rule_name: str
+    condition: str
+    is_test: bool = True
+
+
+@router.post("/send-alert-email")
+def send_alert_email(req: SendEmailRequest):
+    """Send a real email via SMTP. Requires SMTP_USER / SMTP_PASS in .env."""
+    cfg = get_settings()
+    smtp_host = cfg.SMTP_HOST
+    smtp_port = cfg.SMTP_PORT
+    smtp_user = cfg.SMTP_USER
+    smtp_pass = cfg.SMTP_PASS
+    smtp_from = cfg.SMTP_FROM or smtp_user
+
+    if not smtp_user or not smtp_pass or smtp_user == "your_gmail@gmail.com":
+        raise HTTPException(
+            status_code=503,
+            detail="SMTP not configured — fill SMTP_USER and SMTP_PASS in backend/.env then restart the server",
+        )
+
+    condition_readable = req.condition.replace("_", " ").title()
+    tag = "[TEST] " if req.is_test else ""
+    subject = f"{tag}CrossLayer Alert: {req.rule_name}"
+
+    html_body = f"""
+<html><body style="font-family:sans-serif;color:#1e293b;max-width:540px;margin:0 auto">
+  <div style="background:#4f46e5;padding:20px 24px;border-radius:8px 8px 0 0">
+    <h2 style="color:#fff;margin:0;font-size:1.1rem">
+      {'🧪 Test Notification' if req.is_test else '🔔 CrossLayer Security Alert'}
+    </h2>
+  </div>
+  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-top:none;padding:20px 24px;border-radius:0 0 8px 8px">
+    <table style="width:100%;border-collapse:collapse">
+      <tr>
+        <td style="padding:6px 0;color:#64748b;font-size:.85rem;width:120px">Rule</td>
+        <td style="padding:6px 0;font-weight:600">{req.rule_name}</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 0;color:#64748b;font-size:.85rem">Condition</td>
+        <td style="padding:6px 0">{condition_readable}</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 0;color:#64748b;font-size:.85rem">Time</td>
+        <td style="padding:6px 0">{datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}</td>
+      </tr>
+    </table>
+    <p style="margin:16px 0 0;font-size:.8rem;color:#94a3b8">
+      {'This is a test notification. No real threat was detected.' if req.is_test else 'A condition defined in your CrossLayer alert rules has been triggered.'}
+    </p>
+  </div>
+</body></html>"""
+
+    text_body = (
+        f"{'[TEST] ' if req.is_test else ''}CrossLayer Alert: {req.rule_name}\n\n"
+        f"Rule:      {req.rule_name}\n"
+        f"Condition: {condition_readable}\n"
+        f"Time:      {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}\n\n"
+        f"{'This is a test notification.' if req.is_test else 'A condition has been triggered in CrossLayer.'}"
+    )
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"]    = smtp_from
+    msg["To"]      = req.to
+    msg.attach(MIMEText(text_body, "plain"))
+    msg.attach(MIMEText(html_body, "html"))
+
+    try:
+        with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=10) as server:
+            server.login(smtp_user, smtp_pass)
+            server.sendmail(smtp_from, req.to, msg.as_string())
+        logger.info("Alert email sent to %s for rule '%s'", req.to, req.rule_name)
+        return {"status": "sent", "to": req.to}
+    except smtplib.SMTPAuthenticationError:
+        raise HTTPException(
+            status_code=401,
+            detail="SMTP authentication failed — check SMTP_USER and SMTP_PASS (use a Gmail App Password, not your login password)",
+        )
+    except Exception as exc:
+        logger.error("send_alert_email failed: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc))

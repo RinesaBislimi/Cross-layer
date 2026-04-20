@@ -50,6 +50,13 @@ class Settings(BaseSettings):
     TDA_MODEL_PATH: str = "models/tda_model.pkl"
     CROSS_LAYER_MODEL_PATH: str = "models/cross_layer_model.pkl"
 
+    # ── SMTP email settings ───────────────────────────────────────────────────
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 465
+    SMTP_USER: str = ""
+    SMTP_PASS: str = ""
+    SMTP_FROM: str = ""
+
     class Config:
         env_file = ".env"
 

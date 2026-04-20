@@ -161,6 +161,38 @@ export class ApiService {
     return this.http.post<any>(`${this.base}/admin/compute-stats`, null);
   }
 
+  // ── Alert Rules CRUD ──────────────────────────────────────────────────────
+  getAlertRules(): Observable<AlertRuleResponse[]> {
+    return this.http.get<AlertRuleResponse[]>(`${this.base}/alert-rules/`);
+  }
+
+  createAlertRule(payload: {
+    name: string; condition: string; layer: string;
+    notify_method: string; notify_target: string;
+  }): Observable<AlertRuleResponse> {
+    return this.http.post<AlertRuleResponse>(`${this.base}/alert-rules/`, payload);
+  }
+
+  deleteAlertRule(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/alert-rules/${id}`);
+  }
+
+  toggleAlertRule(id: number): Observable<AlertRuleResponse> {
+    return this.http.patch<AlertRuleResponse>(`${this.base}/alert-rules/${id}/toggle`, {});
+  }
+
+  sendAlertEmail(
+    to: string,
+    ruleName: string,
+    condition: string,
+    isTest = true,
+  ): Observable<{ status: string; to: string }> {
+    return this.http.post<{ status: string; to: string }>(
+      `${this.base}/analytics/send-alert-email`,
+      { to, rule_name: ruleName, condition, is_test: isTest },
+    );
+  }
+
   chat(question: string): Observable<{ question: string; answer: string; provider: string }> {
     return this.http.post<{ question: string; answer: string; provider: string }>(
       `${this.base}/admin/chat`, { question }
@@ -237,4 +269,17 @@ export interface EntityData {
   entity: string;
   layers: string[];
   num_layers: number;
+}
+
+export interface AlertRuleResponse {
+  id:            number;
+  name:          string;
+  condition:     string;
+  layer:         string;
+  notify_method: string;
+  notify_target: string;
+  enabled:       boolean;
+  created_at:    string;
+  trigger_count: number;
+  last_fired_at: string | null;
 }

@@ -3,6 +3,7 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { WebSocketService } from './core/services/websocket.service';
+import { ApiService } from './core/services/api.service';
 
 @Component({
   selector: 'app-root',
@@ -195,19 +196,85 @@ export class AppComponent implements OnInit, OnDestroy {
   alertCount = 0;
   private sub?: Subscription;
 
-  constructor(public ws: WebSocketService) {
+  constructor(public ws: WebSocketService, private api: ApiService) {
     ws.connect();
   }
 
   ngOnInit(): void {
     this.sub = this.ws.messages.subscribe(msg => {
-      if (msg && ((msg as any).type === 'incident' || (msg as any).severity === 'critical' || (msg as any).label === 1)) {
+      if (!msg) return;
+      const m = msg as any;
+      if (m.type === 'incident' || m.severity === 'critical' || m.label === 1) {
         this.alertCount++;
       }
+      this._evaluateAlertRules(m);
     });
   }
 
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
+  }
+
+  // ── Alert rule evaluation ──────────────────────────────────────────────────
+
+  private _evaluateAlertRules(msg: any): void {
+    try {
+      const rules: any[] = JSON.parse(localStorage.getItem('cl_alert_rules') || '[]');
+      let changed = false;
+      for (const rule of rules) {
+        if (!rule.enabled) continue;
+        if (this._ruleMatches(rule, msg)) {
+          this._fireAlert(rule, msg);
+          rule.triggerCount = (rule.triggerCount || 0) + 1;
+          changed = true;
+        }
+      }
+      if (changed) localStorage.setItem('cl_alert_rules', JSON.stringify(rules));
+    } catch { /* ignore parse errors */ }
+  }
+
+  private _ruleMatches(rule: any, msg: any): boolean {
+    const sev     = (msg?.severity || '').toLowerCase();
+    const label   = msg?.label;
+    const layers  = msg?.attributes?.layers || [];
+    const type    = (msg?.type || '').toLowerCase();
+    const entity  = msg?.entity;
+
+    switch (rule.condition) {
+      case 'any_anomaly':       return label === 1 || type === 'anomaly';
+      case 'critical_severity': return sev === 'critical';
+      case 'high_severity':     return sev === 'high' || sev === 'critical';
+      case 'cross_layer':       return layers.length > 1 || type.includes('cross-layer');
+      case 'entity_repeat':     return !!entity;
+      default:                  return false;
+    }
+  }
+
+  private _fireAlert(rule: any, msg: any): void {
+    const title = `CrossLayer: ${rule.name}`;
+    const body  = `${rule.condition.replace(/_/g, ' ')} — ${msg?.type || msg?.severity || 'event detected'}`;
+
+    if (rule.notifyMethod === 'browser') {
+      if ((window as any).Notification?.permission === 'granted') {
+        new (window as any).Notification(title, { body, icon: '/favicon.ico' });
+      } else if ((window as any).Notification?.permission !== 'denied') {
+        (window as any).Notification?.requestPermission?.().then((p: string) => {
+          if (p === 'granted') new (window as any).Notification(title, { body, icon: '/favicon.ico' });
+        });
+      }
+    }
+
+    if (rule.notifyMethod === 'webhook' && rule.notifyTarget) {
+      fetch(rule.notifyTarget, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rule: rule.name, condition: rule.condition, event: msg, timestamp: new Date().toISOString() }),
+      }).catch(() => { /* fire and forget */ });
+    }
+
+    if (rule.notifyMethod === 'email' && rule.notifyTarget) {
+      this.api.sendAlertEmail(rule.notifyTarget, rule.name, rule.condition, false)
+        .subscribe({ error: () => { /* fire and forget */ } });
+    }
   }
 }

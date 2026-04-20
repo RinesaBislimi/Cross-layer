@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from ..config import get_settings
 from ..db import get_db
 from ..models import Incident, LogEvent
+from ..services.alert_service import evaluate_and_fire
 from ..services.correlation import find_common_entities, generate_cross_layer_incidents
 from ..services.ml_incidents import generate_ml_incidents
 from ..services.ingestion import ingest_bgl_csv, ingest_cicids_csv, ingest_tda_csv, _backend_root
@@ -202,6 +203,23 @@ def api_generate_incidents(
             max_events_per_incident=max_events_per_incident,
         )
         logger.info("Generated incidents: %s", result)
+
+        # Evaluate alert rules against newly created incidents
+        try:
+            created_count = result.get("created", 0) if isinstance(result, dict) else 0
+            if created_count > 0:
+                recent = (
+                    db.query(Incident)
+                    .order_by(Incident.id.desc())
+                    .limit(min(created_count, 500))
+                    .all()
+                )
+                fired = evaluate_and_fire(db, recent)
+                if fired:
+                    logger.info("Alert rules fired: %d rule(s) triggered", fired)
+        except Exception as _ae:
+            logger.warning("Alert evaluation failed (non-fatal): %s", _ae)
+
         return result
     except HTTPException:
         raise
@@ -249,6 +267,23 @@ def api_generate_incidents_ml(
             fallback_to_label=fallback_to_label,
         )
         logger.info("ML incidents: %s", result.get("created"))
+
+        # Evaluate alert rules against newly created incidents
+        try:
+            created_count = result.get("created", 0) if isinstance(result, dict) else 0
+            if created_count > 0:
+                recent = (
+                    db.query(Incident)
+                    .order_by(Incident.id.desc())
+                    .limit(min(created_count, 500))
+                    .all()
+                )
+                fired = evaluate_and_fire(db, recent)
+                if fired:
+                    logger.info("Alert rules fired: %d rule(s) triggered", fired)
+        except Exception as _ae:
+            logger.warning("Alert evaluation failed (non-fatal): %s", _ae)
+
         return result
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

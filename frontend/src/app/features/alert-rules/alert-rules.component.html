@@ -4,7 +4,7 @@
   <div class="page-header">
     <div>
       <h1>Alert Rules</h1>
-      <p class="subtitle">Define conditions that should trigger notifications</p>
+      <p class="subtitle">Conditions that trigger real-time notifications when incidents are detected</p>
     </div>
     <button class="btn-primary" (click)="openForm()">+ New Rule</button>
   </div>
@@ -12,7 +12,13 @@
   <!-- Notice banner -->
   <div class="notice-banner">
     <span class="notice-icon">ℹ</span>
-    <span>Rules are evaluated client-side — the browser must be open to receive browser notifications.</span>
+    <span>Rules are stored in the database and evaluated server-side every time new incidents are generated. Email alerts fire automatically — no browser needed.</span>
+  </div>
+
+  <!-- Load error -->
+  <div *ngIf="loadError" class="form-error" style="margin:0">
+    <span>⚠ {{ loadError }}</span>
+    <button class="btn-secondary" style="margin-left:1rem;padding:0.25rem 0.75rem;font-size:0.75rem" (click)="loadRules()">Retry</button>
   </div>
 
   <!-- Add form -->
@@ -127,19 +133,40 @@
         </span>
         <div class="rule-stats">
           <span class="trigger-count">{{ rule.triggerCount }} trigger{{ rule.triggerCount !== 1 ? 's' : '' }}</span>
+          <span class="last-fired" [class.fired-never]="!rule.lastFiredAt">
+            Last fired: {{ formatLastFired(rule.lastFiredAt) }}
+          </span>
           <span class="created-at">Created {{ formatDate(rule.createdAt) }}</span>
         </div>
+      </div>
+
+      <!-- Test row -->
+      <div class="rule-test-row">
+        <button class="btn-test" (click)="testRule(rule)" [disabled]="!rule.enabled">
+          ▶ Test now
+        </button>
+        <span *ngIf="testFeedback[rule.id]" class="test-feedback"
+              [class.feedback-ok]="testFeedback[rule.id].startsWith('✓')"
+              [class.feedback-err]="testFeedback[rule.id].startsWith('✕')"
+              [class.feedback-info]="testFeedback[rule.id].startsWith('ℹ')">
+          {{ testFeedback[rule.id] }}
+        </span>
       </div>
 
     </div>
   </div>
 
   <!-- Empty state -->
-  <div *ngIf="rules.length === 0 && !showForm" class="empty-state card">
+  <div *ngIf="rules.length === 0 && !showForm && !loading && !loadError" class="empty-state card">
     <span class="empty-icon">🔕</span>
     <h3>No alert rules yet</h3>
     <p>Create your first rule to start receiving notifications when threats are detected.</p>
     <button class="btn-primary" (click)="openForm()">+ Create First Rule</button>
+  </div>
+
+  <!-- Loading state -->
+  <div *ngIf="loading" class="empty-state card">
+    <p style="color:var(--text-muted)">Loading rules…</p>
   </div>
 
 </div>
