@@ -153,6 +153,18 @@
 .error { color: var(--danger); font-weight: 500; }
 .muted { color: var(--text-muted); margin: 0; padding: 1rem 0; }
 
+/* ── Analyst Feedback ────────────────────────────────────────────────────── */
+.feedback-section { display: flex; flex-direction: column; gap: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--border); margin-top: 0.25rem; }
+.feedback-section h3 { margin: 0; font-size: 0.85rem; font-weight: 700; color: var(--text); }
+.feedback-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.btn-verdict { padding: 0.3rem 0.8rem; border-radius: 7px; border: 1.5px solid var(--border); font-family: inherit; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: background 0.12s, border-color 0.12s, color 0.12s; background: var(--bg-hover); color: var(--text-muted); }
+.btn-verdict:hover:not(:disabled) { border-color: #9ca3af; color: var(--text); }
+.btn-verdict:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-tp.active  { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+.btn-fp.active  { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
+.btn-review.active { background: #fff7ed; color: #c2410c; border-color: #fed7aa; }
+.feedback-saved { font-size: 0.75rem; color: var(--accent); font-weight: 500; }
+
 /* ── AI Analysis section ─────────────────────────────────────────────────── */
 .ai-section { display: flex; flex-direction: column; gap: 0.6rem; padding-top: 0.5rem; border-top: 1px solid var(--border); margin-top: 0.25rem; }
 .ai-section-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }

@@ -25,6 +25,46 @@ router = APIRouter(tags=["admin"])
 _MODEL_TYPE_ERR = f"model_type must be one of: {', '.join(SUPPORTED_MODEL_TYPES)}"
 
 
+def _broadcast_incident_batch(incidents: list) -> None:
+    """Fire-and-forget WebSocket broadcast for newly created incidents."""
+    if not incidents:
+        return
+    try:
+        import asyncio
+        from ..ws.realtime import manager
+
+        # Count by severity
+        sev_counts: dict = {}
+        for inc in incidents:
+            s = (inc.severity or "unknown").lower()
+            sev_counts[s] = sev_counts.get(s, 0) + 1
+
+        # Pick the most severe example to broadcast details about
+        sev_order = ["critical", "high", "medium", "low", "unknown"]
+        sample = next(
+            (i for s in sev_order for i in incidents if (i.severity or "").lower() == s),
+            incidents[0],
+        )
+
+        msg = {
+            "type":        "incident_batch",
+            "count":       len(incidents),
+            "severity_counts": sev_counts,
+            "sample": {
+                "id":       sample.id,
+                "entity":   sample.entity,
+                "severity": sample.severity,
+                "type":     sample.type,
+            },
+        }
+
+        loop = asyncio.new_event_loop()
+        loop.run_until_complete(manager.broadcast(msg))
+        loop.close()
+    except Exception as exc:
+        logger.debug("WS broadcast skipped: %s", exc)
+
+
 @router.post("/admin/ingest/bgl")
 def api_ingest_bgl(db: Session = Depends(get_db)) -> dict:
     try:
@@ -204,7 +244,7 @@ def api_generate_incidents(
         )
         logger.info("Generated incidents: %s", result)
 
-        # Evaluate alert rules against newly created incidents
+        # Evaluate alert rules + response rules against newly created incidents
         try:
             created_count = result.get("created", 0) if isinstance(result, dict) else 0
             if created_count > 0:
@@ -217,6 +257,18 @@ def api_generate_incidents(
                 fired = evaluate_and_fire(db, recent)
                 if fired:
                     logger.info("Alert rules fired: %d rule(s) triggered", fired)
+
+                # Evaluate automated response rules
+                try:
+                    from ..services.response_service import evaluate_and_respond
+                    resp_fired = evaluate_and_respond(db, recent)
+                    if resp_fired:
+                        logger.info("Response rules fired: %d rule(s)", resp_fired)
+                except Exception as _re:
+                    logger.warning("Response rule evaluation failed: %s", _re)
+
+                # Broadcast summary via WebSocket
+                _broadcast_incident_batch(recent)
         except Exception as _ae:
             logger.warning("Alert evaluation failed (non-fatal): %s", _ae)
 
@@ -268,7 +320,7 @@ def api_generate_incidents_ml(
         )
         logger.info("ML incidents: %s", result.get("created"))
 
-        # Evaluate alert rules against newly created incidents
+        # Evaluate alert rules + response rules against newly created incidents
         try:
             created_count = result.get("created", 0) if isinstance(result, dict) else 0
             if created_count > 0:
@@ -281,6 +333,14 @@ def api_generate_incidents_ml(
                 fired = evaluate_and_fire(db, recent)
                 if fired:
                     logger.info("Alert rules fired: %d rule(s) triggered", fired)
+
+                try:
+                    from ..services.response_service import evaluate_and_respond
+                    evaluate_and_respond(db, recent)
+                except Exception as _re:
+                    logger.warning("Response rule evaluation failed: %s", _re)
+
+                _broadcast_incident_batch(recent)
         except Exception as _ae:
             logger.warning("Alert evaluation failed (non-fatal): %s", _ae)
 
@@ -493,6 +553,208 @@ def api_chat_stream(
             "Access-Control-Allow-Origin": "*",
         },
     )
+
+
+
+@router.post("/admin/enrich-entities")
+def api_enrich_entities(
+    limit: int = 10000,
+    db: Session = Depends(get_db),
+) -> dict:
+    """Semantic entity enrichment — extract IP addresses, hostnames, and user IDs
+    from raw log text and write them to the entity field.
+
+    This dramatically improves cross-layer correlation because different layers
+    (BGL, CICIDS, TDA) use different entity formats. After enrichment, events
+    that share an IP/hostname can be correlated across layers.
+    """
+    import re  # noqa: PLC0415
+
+    # Regex patterns for common entity types
+    ip_pattern       = re.compile(r"\b(\d{1,3}(?:\.\d{1,3}){3})\b")
+    hostname_pattern = re.compile(r"\b([a-zA-Z][a-zA-Z0-9\-]{2,30}\.[a-zA-Z]{2,6})\b")
+    user_pattern     = re.compile(r"(?:user[=: ]+|uid[=: ]+|username[=: ]+|USER[=: ]+)([a-zA-Z0-9_\-\.@]{3,40})", re.I)
+
+    # Only process events without entity values
+    events = (
+        db.query(LogEvent)
+        .filter(
+            (LogEvent.entity.is_(None)) | (LogEvent.entity == "")
+        )
+        .limit(limit)
+        .all()
+    )
+
+    updated   = 0
+    ip_found  = 0
+    usr_found = 0
+    host_found = 0
+
+    for event in events:
+        raw = event.raw or event.message or ""
+        if not raw:
+            continue
+
+        entity = None
+
+        # Priority 1: explicit user in message
+        m = user_pattern.search(raw)
+        if m:
+            entity = m.group(1)
+            usr_found += 1
+
+        # Priority 2: first non-private IP
+        if not entity:
+            for ip_match in ip_pattern.findall(raw):
+                parts = ip_match.split(".")
+                if len(parts) == 4:
+                    first = int(parts[0])
+                    # Skip private / loopback
+                    if first not in (10, 127) and not (first == 172 and 16 <= int(parts[1]) <= 31) and not (first == 192 and int(parts[1]) == 168):
+                        entity = ip_match
+                        ip_found += 1
+                        break
+
+        # Priority 3: hostname-looking token
+        if not entity:
+            m = hostname_pattern.search(raw)
+            if m:
+                entity = m.group(1)
+                host_found += 1
+
+        if entity:
+            event.entity = entity[:200]
+            updated += 1
+
+    try:
+        db.commit()
+    except Exception as exc:
+        logger.error("enrich-entities commit failed: %s", exc)
+        raise HTTPException(status_code=500, detail="DB commit failed") from exc
+
+    return {
+        "total_processed": len(events),
+        "updated":         updated,
+        "ip_extracted":    ip_found,
+        "user_extracted":  usr_found,
+        "hostname_extracted": host_found,
+    }
+
+
+@router.post("/admin/fix-labels")
+def api_fix_labels(db: Session = Depends(get_db)) -> dict:
+    """Fix NULL/incorrect labels in the database.
+
+    Uses a single-pass CASE WHEN SQL UPDATE per layer — fast even on millions of rows.
+
+    CICIDS  : label derived from 'Normal Traffic' substring in raw JSON.
+    BGL     : label derived from FATAL/FAILURE/machine-check keywords in raw log text.
+    TDA     : synthetic ~15% anomaly rate via SQLite RANDOM() (no ground-truth labels in CSV).
+    """
+    from sqlalchemy import text  # noqa: PLC0415
+
+    results: dict = {}
+
+    # ── 1. CICIDS — single scan, CASE WHEN (no double pass) ────────────────────
+    # raw JSON ends with: ...'Normal Traffic'... → label 0
+    #                     ...'DoS'... or other attack → label 1
+    cicids_rows = db.execute(
+        text("""
+            UPDATE log_events
+            SET label = CASE
+                WHEN INSTR(raw, 'Normal Traffic') > 0 THEN 0
+                ELSE 1
+            END
+            WHERE layer = 'network'
+        """)
+    ).rowcount
+    results["cicids_updated"] = cicids_rows
+    logger.info("fix-labels: CICIDS → %d rows updated", cicids_rows)
+
+    # ── 2. BGL — keyword detection from stored raw log text ─────────────────────
+    # BGL plain-text entries with FATAL, FAILURE, or machine check are anomalies;
+    # everything else is normal. Matches ~18% of rows (vs dataset's ~10%),
+    # which is acceptable for a demo system.
+    bgl_rows = db.execute(
+        text("""
+            UPDATE log_events
+            SET label = CASE
+                WHEN UPPER(raw) LIKE '%FATAL%'         THEN 1
+                WHEN UPPER(raw) LIKE '%FAILURE%'       THEN 1
+                WHEN UPPER(raw) LIKE '%machine check%' THEN 1
+                ELSE 0
+            END
+            WHERE layer = 'system'
+        """)
+    ).rowcount
+    results["bgl_updated"] = bgl_rows
+    results["bgl_note"] = "BGL labels derived from FATAL/FAILURE/machine-check keywords in raw log text"
+    logger.info("fix-labels: BGL → %d rows updated", bgl_rows)
+
+    # ── 3. TDA — synthetic anomaly labels (no ground-truth in CSV) ─────────────
+    # Mark every 7th row (id % 7 = 0 → ≈14.3%) as anomaly.
+    # Uses the primary-key modulo so it is deterministic AND compatible with both
+    # SQLite (id % 7) and MySQL (id % 7).  No ORDER BY needed.
+    tda_rows = db.execute(
+        text("""
+            UPDATE log_events
+            SET label = CASE WHEN id % 7 = 0 THEN 1 ELSE 0 END
+            WHERE layer = 'application'
+        """)
+    ).rowcount
+    results["tda_updated"] = tda_rows
+    results["tda_note"] = "TDA labels are synthetic (~14% anomaly rate via id%7) — no ground-truth labels exist in the TDA CSV"
+    logger.info("fix-labels: TDA → %d rows updated with synthetic labels", tda_rows)
+
+    db.commit()
+
+    # ── Final count ─────────────────────────────────────────────────────────────
+    dist = db.execute(
+        text("SELECT layer, label, COUNT(*) FROM log_events GROUP BY layer, label ORDER BY layer, label")
+    ).fetchall()
+    results["distribution"] = [
+        {"layer": r[0], "label": r[1], "count": r[2]} for r in dist
+    ]
+
+    return {"status": "done", **results}
+
+
+@router.delete("/admin/incidents/clear-simulated")
+def api_clear_simulated_incidents(db: Session = Depends(get_db)) -> dict:
+    """Delete all incidents created by the simulator.
+
+    Simulated incidents have ``attributes->>'$.simulated' = true`` OR a type
+    that starts with 'Simulated '.  This lets you clean up test data so the
+    real ML-generated incidents become visible again.
+    """
+    from sqlalchemy import text  # noqa: PLC0415
+
+    # MySQL JSON path syntax: JSON_EXTRACT(attributes, '$.simulated') = true
+    # We also catch the older 'Simulated …' type column for safety.
+    try:
+        result = db.execute(
+            text("""
+                DELETE FROM incidents
+                WHERE type LIKE 'Simulated %'
+                   OR JSON_EXTRACT(attributes, '$.simulated') = true
+            """)
+        )
+        deleted = result.rowcount
+    except Exception:
+        # SQLite / older MySQL fallback — attributes stored as plain JSON text
+        result = db.execute(
+            text("""
+                DELETE FROM incidents
+                WHERE type LIKE 'Simulated %'
+                   OR attributes LIKE '%"simulated": true%'
+                   OR attributes LIKE '%"simulated":true%'
+            """)
+        )
+        deleted = result.rowcount
+
+    db.commit()
+    logger.info("clear-simulated-incidents: deleted %d rows", deleted)
+    return {"status": "ok", "deleted": deleted}
 
 
 @router.post("/admin/compute-stats")

@@ -61,7 +61,8 @@ def _train_layer(
     model, train_m, val_m, test_m, report = train_and_evaluate_with_split(
         df, feature_cols, model_type=model_type
     )
-    save_model(model, _resolve_model_path(model_path))
+    resolved = _resolve_model_path(model_path)
+    save_model(model, resolved)
     return {
         "train_metrics": train_m,
         "val_metrics":   val_m,
@@ -94,7 +95,8 @@ def train_cicids(db: Session, model_type: str = "rf") -> dict:
     model, train_m, val_m, test_m, report = train_and_evaluate_with_split(
         df, feature_cols, model_type=model_type
     )
-    save_model(model, _resolve_model_path(settings.CICIDS_MODEL_PATH))
+    cicids_path = _resolve_model_path(settings.CICIDS_MODEL_PATH)
+    save_model(model, cicids_path)
     return {
         "train_metrics": train_m,
         "val_metrics":   val_m,

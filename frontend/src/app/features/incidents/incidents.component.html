@@ -144,6 +144,32 @@
         </div>
       </div>
 
+      <!-- Analyst Feedback -->
+      <div class="feedback-section">
+        <h3>Analyst Verdict</h3>
+        <div class="feedback-row">
+          <button class="btn-verdict btn-tp"
+                  [class.active]="feedbackState[selected.id!]?.verdict === 'true_positive'"
+                  (click)="submitFeedback(selected, 'true_positive')"
+                  [disabled]="feedbackState[selected.id!]?.submitting">
+            ✓ True Positive
+          </button>
+          <button class="btn-verdict btn-fp"
+                  [class.active]="feedbackState[selected.id!]?.verdict === 'false_positive'"
+                  (click)="submitFeedback(selected, 'false_positive')"
+                  [disabled]="feedbackState[selected.id!]?.submitting">
+            ✕ False Positive
+          </button>
+          <button class="btn-verdict btn-review"
+                  [class.active]="feedbackState[selected.id!]?.verdict === 'needs_review'"
+                  (click)="submitFeedback(selected, 'needs_review')"
+                  [disabled]="feedbackState[selected.id!]?.submitting">
+            ? Needs Review
+          </button>
+        </div>
+        <span *ngIf="feedbackLabel(selected)" class="feedback-saved">{{ feedbackLabel(selected) }}</span>
+      </div>
+
       <!-- AI Explanation -->
       <div class="ai-section">
         <div class="ai-section-head">

@@ -213,7 +213,41 @@
       <span class="live-badge">LIVE</span>
     </div>
     <div class="ws-list">
-      <pre class="ws-msg" *ngFor="let msg of wsMessages | slice:0:8">{{ msg | json }}</pre>
+      <div class="ws-msg" *ngFor="let msg of wsMessages | slice:0:8">
+
+        <!-- type badge -->
+        <span class="ws-type-badge"
+              [class.ws-anomaly]="msg.type === 'log_anomaly'"
+              [class.ws-incident]="msg.type === 'incident_batch'"
+              [class.ws-info]="msg.type !== 'log_anomaly' && msg.type !== 'incident_batch'">
+          {{ msg.type === 'log_anomaly' ? '⚠ anomaly' : msg.type === 'incident_batch' ? '🚨 incident' : msg.type }}
+        </span>
+
+        <!-- layer badge -->
+        <span class="ws-layer-badge badge badge-{{ msg.layer || 'unknown' }}" *ngIf="msg.layer">
+          {{ msg.layer }}
+        </span>
+
+        <!-- entity or batch count -->
+        <span class="ws-entity" *ngIf="msg.entity">{{ msg.entity }}</span>
+        <span class="ws-entity" *ngIf="!msg.entity && msg.count">{{ msg.count }} events</span>
+
+        <!-- message / raw text -->
+        <span class="ws-text" *ngIf="msg.message">
+          {{ msg.message | slice:0:90 }}{{ (msg.message?.length ?? 0) > 90 ? '…' : '' }}
+        </span>
+
+        <!-- confidence -->
+        <span class="ws-conf" *ngIf="msg.confidence != null">
+          {{ (msg.confidence * 100).toFixed(0) }}% conf
+        </span>
+
+        <!-- severity chip -->
+        <span class="ws-sev" [ngClass]="'ws-sev-' + (msg.severity || '')" *ngIf="msg.severity">
+          {{ msg.severity }}
+        </span>
+
+      </div>
     </div>
   </section>
 

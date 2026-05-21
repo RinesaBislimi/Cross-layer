@@ -1,9 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
+import { WebSocketService } from '../../core/services/websocket.service';
 import { Incident } from '../../shared/models/incident';
 import { LogEvent } from '../../shared/models/log-event';
+import { Subject, takeUntil, debounceTime } from 'rxjs';
 
 @Component({
   selector: 'app-incidents',
@@ -12,7 +14,7 @@ import { LogEvent } from '../../shared/models/log-event';
   templateUrl: './incidents.component.html',
   styleUrls: ['./incidents.component.css'],
 })
-export class IncidentsComponent implements OnInit {
+export class IncidentsComponent implements OnInit, OnDestroy {
   allIncidents: Incident[] = [];
   loading = false;
   error: string | null = null;
@@ -25,9 +27,26 @@ export class IncidentsComponent implements OnInit {
 
   severities = ['critical', 'high', 'medium', 'low'];
 
-  constructor(private api: ApiService) {}
+  private destroy$ = new Subject<void>();
+  private _refresh$ = new Subject<void>();
 
-  ngOnInit(): void { this.load(); }
+  constructor(private api: ApiService, private ws: WebSocketService) {}
+
+  ngOnInit(): void {
+    this.load();
+    // Auto-refresh when anomaly/incident WS messages arrive (debounced 3s)
+    this.ws.messages.pipe(takeUntil(this.destroy$)).subscribe((msg: any) => {
+      if (msg?.type === 'log_anomaly' || msg?.type === 'incident' || msg?.type === 'incident_batch') {
+        this._refresh$.next();
+      }
+    });
+    this._refresh$.pipe(debounceTime(3000), takeUntil(this.destroy$)).subscribe(() => this.load());
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next(); this.destroy$.complete();
+    this._refresh$.complete();
+  }
 
   load(): void {
     this.loading = true;
@@ -150,6 +169,30 @@ export class IncidentsComponent implements OnInit {
       log_events: 'Entity',
     };
     return map[mode ?? ''] ?? mode ?? '';
+  }
+
+  // ── Analyst feedback ─────────────────────────────────────────────────────
+  feedbackState: Record<number, { verdict: string; submitting: boolean; done: boolean }> = {};
+
+  submitFeedback(inc: Incident, verdict: string): void {
+    if (!inc.id) return;
+    this.feedbackState[inc.id] = { verdict, submitting: true, done: false };
+    this.api.submitFeedback(inc.id, verdict).subscribe({
+      next: () => {
+        this.feedbackState[inc.id] = { verdict, submitting: false, done: true };
+      },
+      error: () => {
+        this.feedbackState[inc.id] = { verdict, submitting: false, done: false };
+      },
+    });
+  }
+
+  feedbackLabel(inc: Incident): string {
+    const s = inc.id ? this.feedbackState[inc.id] : undefined;
+    if (!s) return '';
+    if (s.submitting) return 'Saving…';
+    if (s.done) return 'Saved: ' + s.verdict.replace(/_/g, ' ');
+    return '';
   }
 
   // ── AI explain ────────────────────────────────────────────────────────────

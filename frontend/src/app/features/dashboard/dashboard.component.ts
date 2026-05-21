@@ -5,7 +5,7 @@ import { ApiService, StatsResponse } from '../../core/services/api.service';
 import { WebSocketService } from '../../core/services/websocket.service';
 import { LogEvent } from '../../shared/models/log-event';
 import { Incident } from '../../shared/models/incident';
-import { Subject, takeUntil, interval, filter, take } from 'rxjs';
+import { Subject, takeUntil, interval, filter, take, debounceTime } from 'rxjs';
 
 @Component({
   selector: 'app-dashboard',
@@ -19,10 +19,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   recentLogs: LogEvent[] = [];
   recentIncidents: Incident[] = [];
   stats: StatsResponse | null = null;
-  wsMessages: unknown[] = [];
+  wsMessages: any[] = [];
   liveAlertCount = 0;
   countdown = 30;
   loading = true;
+  private _anomalyRefresh$ = new Subject<void>();
   statsComputing = false;
   statsComputeMsg = '';
   private destroy$ = new Subject<void>();
@@ -51,16 +52,30 @@ export class DashboardComponent implements OnInit, OnDestroy {
       take(1),
     ).subscribe(() => this.refresh());
 
-    // Live message feed
+    // Live message feed — also trigger a debounced refresh on anomaly events
     this.ws.messages.pipe(takeUntil(this.destroy$)).subscribe((msg) => {
       this.wsMessages = [msg, ...this.wsMessages].slice(0, 20);
       this.liveAlertCount++;
+      const m = msg as any;
+      if (m?.type === 'log_anomaly' || m?.type === 'incident' || m?.type === 'incident_batch') {
+        this._anomalyRefresh$.next();
+      }
+    });
+
+    // Debounce rapid anomaly bursts — refresh stats/incidents at most once per 3s
+    this._anomalyRefresh$.pipe(
+      debounceTime(3000),
+      takeUntil(this.destroy$),
+    ).subscribe(() => {
+      this.countdown = 30;
+      this.refresh();
     });
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    this._anomalyRefresh$.complete();
   }
 
   refresh(): void {

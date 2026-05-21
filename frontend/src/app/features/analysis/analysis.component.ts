@@ -234,6 +234,131 @@ export class AnalysisComponent implements OnInit {
     this._runGenerate('Generate ML incidents', () => this.api.generateMlIncidents());
   }
 
+  // ── Fix labels ────────────────────────────────────────────────────────────
+  fixLoading = false;
+  fixResult  = '';
+
+  fixLabels(): void {
+    this.fixLoading = true;
+    this.fixResult  = '';
+    this.api.fixLabels().subscribe({
+      next: (res: any) => {
+        this.fixLoading = false;
+        const dist: any[] = res.distribution ?? [];
+        const attacks = dist.filter((d: any) => d.label === 1).reduce((s: number, d: any) => s + d.count, 0);
+        const total   = dist.reduce((s: number, d: any) => s + d.count, 0);
+        this.fixResult = `✓ Done — ${attacks.toLocaleString()} anomalies out of ${total.toLocaleString()} total events labelled. Simulation ready.`;
+      },
+      error: (e: any) => {
+        this.fixLoading = false;
+        this.fixResult  = `✗ ${e?.error?.detail || 'Fix failed — see server logs.'}`;
+      },
+    });
+  }
+
+  // ── Clear simulated incidents ─────────────────────────────────
+  clearSimLoading = false;
+  clearSimResult  = '';
+
+  clearSimulatedIncidents(): void {
+    this.clearSimLoading = true;
+    this.clearSimResult  = '';
+    this.api.clearSimulatedIncidents().subscribe({
+      next: (res: any) => {
+        this.clearSimLoading = false;
+        this.clearSimResult  = `✓ Deleted ${(res.deleted ?? 0).toLocaleString()} simulated incident${res.deleted !== 1 ? 's' : ''}. ML incidents are now visible.`;
+      },
+      error: (e: any) => {
+        this.clearSimLoading = false;
+        this.clearSimResult  = `✗ ${e?.error?.detail || 'Clear failed — see server logs.'}`;
+      },
+    });
+  }
+
+  // ── Semantic entity enrichment ─────────────────────────────────
+  enrichLoading = false;
+  enrichResult  = '';
+
+  enrichEntities(): void {
+    this.enrichLoading = true;
+    this.enrichResult  = '';
+    this.api.enrichEntities().subscribe({
+      next: (res: any) => {
+        this.enrichLoading = false;
+        this.enrichResult  = `Updated ${res.updated} events (IPs: ${res.ip_extracted}, users: ${res.user_extracted}, hosts: ${res.hostname_extracted})`;
+      },
+      error: () => {
+        this.enrichLoading = false;
+        this.enrichResult  = 'Enrichment failed — see server logs.';
+      },
+    });
+  }
+
+  // ── Live simulation ─────────────────────────────────────────────
+  simLayer        = 'bgl';
+  simRate         = 10;
+  simMax          = 300;
+  simAnomaliesOnly = false;
+  simRunning      = false;
+  simStatus: any  = null;
+  simError        = '';
+  private _simPoller?: any;
+
+  simLayers = [
+    { value: 'bgl',    label: 'BGL (System logs)' },
+    { value: 'cicids', label: 'CICIDS (Network)' },
+    { value: 'tda',    label: 'TDA (Application)' },
+    { value: 'all',    label: 'All layers' },
+  ];
+
+  startSim(): void {
+    this.simError = '';
+    this.api.startSimulation({
+      layer:          this.simLayer,
+      rate:           this.simRate,
+      max_events:     this.simMax,
+      only_anomalies: this.simAnomaliesOnly,
+    }).subscribe({
+      next: () => {
+        this.simRunning = true;
+        this._pollSimStatus();
+      },
+      error: (e: any) => {
+        this.simError = e?.error?.detail || 'Failed to start simulation.';
+      },
+    });
+  }
+
+  stopSim(): void {
+    this.api.stopSimulation().subscribe({
+      next: () => { this._pollSimStatus(); },
+      error: () => { this.simRunning = false; this._clearPoller(); },
+    });
+  }
+
+  private _pollSimStatus(): void {
+    this._clearPoller();
+    this._simPoller = setInterval(() => {
+      this.api.getSimulationStatus().subscribe({
+        next: (s: any) => {
+          this.simStatus  = s;
+          this.simRunning = s.running;
+          if (!s.running) this._clearPoller();
+        },
+        error: () => this._clearPoller(),
+      });
+    }, 800);
+  }
+
+  private _clearPoller(): void {
+    if (this._simPoller) { clearInterval(this._simPoller); this._simPoller = undefined; }
+  }
+
+  simProgressPct(): number {
+    if (!this.simStatus || !this.simMax) return 0;
+    return Math.min(100, Math.round((this.simStatus.sent / this.simMax) * 100));
+  }
+
   private _runGenerate(action: string, call: () => any): void {
     this.generateLoading = true;
     const entry = this._addRunning(action, 3);

@@ -161,6 +161,22 @@ export class ApiService {
     return this.http.post<any>(`${this.base}/admin/compute-stats`, null);
   }
 
+  // ── Simulation ────────────────────────────────────────────────────────────
+  startSimulation(params: {
+    layer: string; rate: number; max_events: number;
+    only_anomalies: boolean;
+  }): Observable<any> {
+    return this.http.post<any>(`${this.base}/admin/simulate/start`, params);
+  }
+
+  stopSimulation(): Observable<any> {
+    return this.http.post<any>(`${this.base}/admin/simulate/stop`, null);
+  }
+
+  getSimulationStatus(): Observable<any> {
+    return this.http.get<any>(`${this.base}/admin/simulate/status`);
+  }
+
   // ── Alert Rules CRUD ──────────────────────────────────────────────────────
   getAlertRules(): Observable<AlertRuleResponse[]> {
     return this.http.get<AlertRuleResponse[]>(`${this.base}/alert-rules/`);
@@ -191,6 +207,66 @@ export class ApiService {
       `${this.base}/analytics/send-alert-email`,
       { to, rule_name: ruleName, condition, is_test: isTest },
     );
+  }
+
+  // ── Feedback ───────────────────────────────────────────────────────────────
+  submitFeedback(incidentId: number, verdict: string, notes = ''): Observable<any> {
+    return this.http.post<any>(`${this.base}/incidents/${incidentId}/feedback`, { verdict, notes });
+  }
+
+  getIncidentFeedback(incidentId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.base}/incidents/${incidentId}/feedback`);
+  }
+
+  getFeedbackSummary(): Observable<{ total: number; by_verdict: Record<string, number> }> {
+    return this.http.get<any>(`${this.base}/incidents/feedback/summary`);
+  }
+
+  // ── Response Rules ────────────────────────────────────────────────────────���
+  getResponseRules(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.base}/response-rules/`);
+  }
+
+  createResponseRule(payload: {
+    name: string; description: string; condition: string; layer: string;
+    action_type: string; action_target: string; action_payload: string;
+  }): Observable<any> {
+    return this.http.post<any>(`${this.base}/response-rules/`, payload);
+  }
+
+  deleteResponseRule(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/response-rules/${id}`);
+  }
+
+  toggleResponseRule(id: number): Observable<any> {
+    return this.http.patch<any>(`${this.base}/response-rules/${id}/toggle`, {});
+  }
+
+  testResponseRule(id: number): Observable<any> {
+    return this.http.post<any>(`${this.base}/response-rules/test/${id}`, null);
+  }
+
+  fixLabels(): Observable<any> {
+    return this.http.post<any>(`${this.base}/admin/fix-labels`, null);
+  }
+
+  clearSimulatedIncidents(): Observable<any> {
+    return this.http.delete<any>(`${this.base}/admin/incidents/clear-simulated`);
+  }
+
+  enrichEntities(limit = 10000): Observable<any> {
+    return this.http.post<any>(`${this.base}/admin/enrich-entities`, null, {
+      params: { limit: limit.toString() },
+    });
+  }
+
+  // ── Live ingestion ──────────────────────────────────────────────────────────
+  ingestEvent(event: {
+    layer: string; source?: string; entity?: string;
+    message?: string; timestamp?: string; features?: Record<string, number>;
+    raw?: string;
+  }): Observable<any> {
+    return this.http.post<any>(`${this.base}/ingest/event`, event);
   }
 
   chat(question: string): Observable<{ question: string; answer: string; provider: string }> {

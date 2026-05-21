@@ -23,14 +23,8 @@ from ..models.incidents import Incident
 
 logger = logging.getLogger(__name__)
 
-_COOLDOWN_MINUTES = 5          # minimum minutes between repeated fires for the same rule
+_COOLDOWN_MINUTES = 5
 _SEV_SCORE = {"critical": 0.90, "high": 0.75, "medium": 0.50, "low": 0.25}
-_SEV_COLOR = {
-    "critical": "#dc2626",
-    "high":     "#ea580c",
-    "medium":   "#ca8a04",
-    "low":      "#16a34a",
-}
 
 
 def _sev_score(sev):
@@ -47,7 +41,6 @@ def _rule_matches(rule, incident):
     layers   = attrs.get("layers", []) if isinstance(attrs, dict) else []
     inc_type = (incident.type or "").lower()
 
-    # Optional layer filter
     if rule.layer:
         if rule.layer not in layers:
             return False
@@ -61,94 +54,292 @@ def _rule_matches(rule, incident):
     return False
 
 
-# ── Email helpers ─────────────────────────────────────────────────────────────
+# ── Severity helpers ──────────────────────────────────────────────────────────
 
-def _build_email(rule, incidents, now):
-    # type: (AlertRule, List[Incident], datetime) -> MIMEMultipart
-    count            = len(incidents)
-    condition_label  = rule.condition.replace("_", " ").title()
-    subject          = "CrossLayer Alert: %s (%d incident%s)" % (
-        rule.name, count, "s" if count != 1 else ""
+def _max_severity(incidents):
+    # type: (List[Incident]) -> str
+    for s in ("critical", "high", "medium", "low"):
+        if any((inc.severity or "").lower() == s for inc in incidents):
+            return s
+    return "unknown"
+
+
+def _sev_counts(incidents):
+    # type: (List[Incident]) -> dict
+    counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
+    for inc in incidents:
+        s = (inc.severity or "").lower()
+        if s in counts:
+            counts[s] += 1
+    return counts
+
+
+# ── Email builder ─────────────────────────────────────────────────────────────
+
+def _build_email(rule, incidents, now, is_test=False):
+    # type: (AlertRule, List[Incident], datetime, bool) -> MIMEMultipart
+    count           = len(incidents)
+    condition_label = rule.condition.replace("_", " ").title()
+    max_sev         = _max_severity(incidents) if incidents else "unknown"
+    sev_counts_map  = _sev_counts(incidents)
+    ts_short        = now.strftime("%b %d, %H:%M UTC")
+    ts_full         = now.strftime("%Y-%m-%d %H:%M:%S")
+    test_prefix     = "[TEST] " if is_test else ""
+
+    subject = "%sCrossLayer Alert: %s -- %d incident%s detected" % (
+        test_prefix, rule.name, count, "s" if count != 1 else ""
     )
 
-    # HTML incident rows (cap at 10)
-    rows_html = ""
-    rows_text = ""
-    for inc in incidents[:10]:
+    # ── Severity count boxes ──────────────────────────────────────────────────
+    sev_cells_html = ""
+    for sev, label in (("critical", "Critical"), ("high", "High"),
+                       ("medium", "Medium"), ("low", "Low")):
+        n = sev_counts_map[sev]
+        sev_cells_html += (
+            "<td style='text-align:center;padding:0 4px'>"
+            "<div style='border:1px solid #e2e8f0;border-radius:6px;padding:10px 6px'>"
+            "<div style='font-size:1.25rem;font-weight:800;color:#0f172a;line-height:1'>%d</div>"
+            "<div style='font-size:0.6rem;text-transform:uppercase;letter-spacing:0.08em;"
+            "color:#64748b;font-weight:600;margin-top:3px'>%s</div>"
+            "</div></td>"
+        ) % (n, label)
+
+    # ── Incident table rows ───────────────────────────────────────────────────
+    rows_html  = ""
+    plain_list = ""
+    for inc in incidents[:15]:
         attrs     = inc.attributes or {}
         layers    = attrs.get("layers", []) if isinstance(attrs, dict) else []
-        layer_str = ", ".join(layers) if layers else "unknown"
-        sev       = inc.severity or "unknown"
-        color     = _SEV_COLOR.get(sev, "#64748b")
+        layer_str = ", ".join(layers) if layers else "-"
+        sev       = (inc.severity or "unknown").upper()
+        etype     = (inc.type or "Unknown").replace("_", " ").title()
+        entity    = inc.entity or "-"
+
         rows_html += (
-            "<tr>"
-            "<td style='padding:6px 8px;border-bottom:1px solid #e2e8f0'>%s</td>"
-            "<td style='padding:6px 8px;border-bottom:1px solid #e2e8f0;"
-            "color:%s;font-weight:600'>%s</td>"
-            "<td style='padding:6px 8px;border-bottom:1px solid #e2e8f0'>%s</td>"
-            "<td style='padding:6px 8px;border-bottom:1px solid #e2e8f0'>%s</td>"
+            "<tr style='border-bottom:1px solid #f1f5f9'>"
+            "<td style='padding:9px 10px 9px 0;font-size:0.78rem;font-weight:600;"
+            "color:#0f172a;vertical-align:top'>%s</td>"
+            "<td style='padding:9px 10px;font-size:0.75rem;color:#475569;"
+            "vertical-align:top'>%s</td>"
+            "<td style='padding:9px 10px;font-size:0.72rem;color:#475569;"
+            "vertical-align:top'>%s</td>"
+            "<td style='padding:9px 0 9px 10px;font-size:0.72rem;font-weight:700;"
+            "color:#0f172a;vertical-align:top;white-space:nowrap'>%s</td>"
             "</tr>"
-        ) % (inc.type or "unknown", color, sev, inc.entity or "—", layer_str)
-        rows_text += "  - %s | %s | entity: %s | layers: %s\n" % (
-            inc.type or "unknown", sev, inc.entity or "—", layer_str
+        ) % (etype, entity, layer_str, sev)
+
+        plain_list += "  [%s] %s  entity:%s  layers:%s\n" % (sev, etype, entity, layer_str)
+
+    trunc_note = ""
+    if count > 15:
+        trunc_note = "(showing 15 of %d)" % count
+        rows_html += (
+            "<tr><td colspan='4' style='padding:9px 0;font-size:0.72rem;"
+            "color:#94a3b8;font-style:italic'>... and %d more incidents</td></tr>"
+        ) % (count - 15)
+        plain_list += "  ... and %d more\n" % (count - 15)
+
+    # ── Test notice row ───────────────────────────────────────────────────────
+    test_row_html = ""
+    if is_test:
+        test_row_html = (
+            "<tr><td style='background:#fff;padding:0 28px 20px'>"
+            "<div style='border:1px dashed #cbd5e1;border-radius:6px;padding:10px 14px;"
+            "font-size:0.75rem;color:#64748b;text-align:center'>"
+            "This is a test notification. No real threat was detected."
+            "</div></td></tr>"
         )
 
-    if count > 10:
-        rows_html += (
-            "<tr><td colspan='4' style='padding:6px 8px;color:#64748b;"
-            "font-style:italic'>… and %d more</td></tr>"
-        ) % (count - 10)
-        rows_text += "  … and %d more\n" % (count - 10)
+    # ── Full HTML ─────────────────────────────────────────────────────────────
+    html_body = """\
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+</head>
+<body style="margin:0;padding:0;background:#f1f5f9;
+             font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif">
 
-    html_body = """
-<html><body style="font-family:sans-serif;color:#1e293b;max-width:600px;margin:0 auto">
-  <div style="background:#dc2626;padding:18px 24px;border-radius:8px 8px 0 0">
-    <h2 style="color:#fff;margin:0;font-size:1rem">&#x1F6A8; CrossLayer Security Alert</h2>
-  </div>
-  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-top:none;
-              padding:20px 24px;border-radius:0 0 8px 8px">
-    <p style="margin:0 0 8px"><strong>Rule:</strong> {name}</p>
-    <p style="margin:0 0 16px"><strong>Condition triggered:</strong> {cond}</p>
-    <p style="margin:0 0 8px"><strong>{count} matching incident{plural}:</strong></p>
-    <table style="width:100%;border-collapse:collapse;font-size:.82rem;
-                  background:#fff;border:1px solid #e2e8f0;border-radius:6px">
-      <thead>
-        <tr style="background:#f1f5f9">
-          <th style="padding:7px 8px;text-align:left">Type</th>
-          <th style="padding:7px 8px;text-align:left">Severity</th>
-          <th style="padding:7px 8px;text-align:left">Entity</th>
-          <th style="padding:7px 8px;text-align:left">Layers</th>
-        </tr>
-      </thead>
-      <tbody>{rows}</tbody>
-    </table>
-    <p style="margin:16px 0 0;font-size:.78rem;color:#94a3b8">
-      Triggered at {ts} — CrossLayer Security System
-    </p>
-  </div>
-</body></html>""".format(
-        name=rule.name,
-        cond=condition_label,
-        count=count,
-        plural="s" if count != 1 else "",
-        rows=rows_html,
-        ts=now.strftime("%Y-%m-%d %H:%M:%S UTC"),
+<div style="display:none;max-height:0;overflow:hidden;color:#f1f5f9">
+  {test_pfx}CrossLayer Alert: {rule_name} -- {count} incident{plural} at {ts_short}
+</div>
+
+<table width="100%%" cellpadding="0" cellspacing="0"
+       style="background:#f1f5f9;padding:32px 16px">
+<tr><td align="center">
+<table width="580" cellpadding="0" cellspacing="0" style="max-width:580px;width:100%%">
+
+  <!-- HEADER -->
+  <tr>
+    <td style="background:#0f172a;border-radius:8px 8px 0 0;padding:22px 28px 20px">
+      <table width="100%%" cellpadding="0" cellspacing="0"><tr>
+        <td style="vertical-align:middle">
+          <div style="color:#f8fafc;font-size:0.9rem;font-weight:700;
+                       letter-spacing:-0.01em">CrossLayer</div>
+          <div style="color:#475569;font-size:0.65rem;margin-top:2px;
+                       text-transform:uppercase;letter-spacing:0.06em">
+            Security Platform
+          </div>
+        </td>
+        <td style="text-align:right;vertical-align:middle">
+          <span style="border:1px solid #334155;color:#94a3b8;font-size:0.65rem;
+                        font-weight:600;letter-spacing:0.06em;text-transform:uppercase;
+                        padding:4px 12px;border-radius:4px">{label_tag}</span>
+        </td>
+      </tr></table>
+
+      <div style="margin-top:20px;padding-top:18px;border-top:1px solid #1e293b">
+        <div style="color:#f8fafc;font-size:1.05rem;font-weight:700;line-height:1.3">
+          {alert_title}
+        </div>
+        <div style="color:#64748b;font-size:0.78rem;margin-top:5px">
+          Rule: <span style="color:#94a3b8">{rule_name}</span>
+          &nbsp;&middot;&nbsp;{ts_short}
+        </div>
+      </div>
+    </td>
+  </tr>
+
+  <!-- SUMMARY STRIP -->
+  <tr>
+    <td style="background:#1e293b;padding:14px 28px">
+      <table width="100%%" cellpadding="0" cellspacing="0"><tr>
+        <td style="width:25%%;vertical-align:middle">
+          <div style="color:#475569;font-size:0.6rem;text-transform:uppercase;
+                       letter-spacing:0.08em;font-weight:600">Incidents</div>
+          <div style="color:#f8fafc;font-size:1.4rem;font-weight:800;
+                       line-height:1;margin-top:2px">{count}</div>
+        </td>
+        <td style="width:1px;background:#334155"></td>
+        <td style="padding-left:20px;vertical-align:middle">
+          <div style="color:#475569;font-size:0.6rem;text-transform:uppercase;
+                       letter-spacing:0.08em;font-weight:600;margin-bottom:2px">Condition</div>
+          <div style="color:#94a3b8;font-size:0.8rem;font-weight:500">{condition}</div>
+        </td>
+        <td style="text-align:right;vertical-align:middle;white-space:nowrap">
+          <div style="color:#475569;font-size:0.6rem;text-transform:uppercase;
+                       letter-spacing:0.08em;font-weight:600;margin-bottom:2px">Max Severity</div>
+          <div style="color:#f8fafc;font-size:0.8rem;font-weight:700;
+                       text-transform:uppercase">{max_sev}</div>
+        </td>
+      </tr></table>
+    </td>
+  </tr>
+
+  <!-- BODY -->
+  <tr>
+    <td style="background:#ffffff;padding:24px 28px 8px">
+
+      <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;
+                   letter-spacing:0.1em;color:#94a3b8;margin-bottom:10px">By Severity</div>
+      <table width="100%%" cellpadding="0" cellspacing="0" style="margin-bottom:24px">
+        <tr>{sev_cells}</tr>
+      </table>
+
+      <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;
+                   letter-spacing:0.1em;color:#94a3b8;margin-bottom:10px">
+        Incident Details {trunc_note}
+      </div>
+      <table width="100%%" cellpadding="0" cellspacing="0"
+             style="border-top:1px solid #e2e8f0">
+        <thead>
+          <tr>
+            <th style="padding:7px 10px 7px 0;font-size:0.62rem;font-weight:700;
+                        text-transform:uppercase;letter-spacing:0.07em;color:#94a3b8;
+                        text-align:left;border-bottom:1px solid #e2e8f0">Type</th>
+            <th style="padding:7px 10px;font-size:0.62rem;font-weight:700;
+                        text-transform:uppercase;letter-spacing:0.07em;color:#94a3b8;
+                        text-align:left;border-bottom:1px solid #e2e8f0">Entity</th>
+            <th style="padding:7px 10px;font-size:0.62rem;font-weight:700;
+                        text-transform:uppercase;letter-spacing:0.07em;color:#94a3b8;
+                        text-align:left;border-bottom:1px solid #e2e8f0">Layers</th>
+            <th style="padding:7px 0 7px 10px;font-size:0.62rem;font-weight:700;
+                        text-transform:uppercase;letter-spacing:0.07em;color:#94a3b8;
+                        text-align:right;border-bottom:1px solid #e2e8f0">Sev.</th>
+          </tr>
+        </thead>
+        <tbody>{rows}</tbody>
+      </table>
+    </td>
+  </tr>
+
+  {test_row}
+
+  <!-- CTA -->
+  <tr>
+    <td style="background:#ffffff;padding:20px 28px 24px;
+               border-top:1px solid #f1f5f9;text-align:center">
+      <a href="http://localhost:4200/incidents"
+         style="display:inline-block;background:#0f172a;color:#f8fafc;
+                text-decoration:none;font-weight:600;font-size:0.78rem;
+                padding:11px 28px;border-radius:6px;letter-spacing:0.02em">
+        Open CrossLayer Dashboard
+      </a>
+    </td>
+  </tr>
+
+  <!-- FOOTER -->
+  <tr>
+    <td style="background:#f8fafc;border:1px solid #e2e8f0;border-top:none;
+               border-radius:0 0 8px 8px;padding:14px 28px">
+      <div style="font-size:0.64rem;color:#94a3b8;line-height:1.7">
+        CrossLayer Security Platform &middot; {ts_full} UTC<br>
+        Rule: <em>{rule_name}</em> &middot; Condition: {condition}
+        &middot; 5-minute repeat cooldown
+      </div>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>""".format(
+        test_pfx    = test_prefix,
+        rule_name   = rule.name,
+        count       = count,
+        plural      = "s" if count != 1 else "",
+        ts_short    = ts_short,
+        ts_full     = ts_full,
+        max_sev     = max_sev.upper(),
+        label_tag   = "TEST ALERT" if is_test else "ALERT",
+        alert_title = ("Test -- %s" % rule.name) if is_test
+                      else ("Security Alert: %s" % rule.name),
+        condition   = condition_label,
+        sev_cells   = sev_cells_html,
+        rows        = rows_html,
+        trunc_note  = trunc_note,
+        test_row    = test_row_html,
     )
 
+    # ── Plain text fallback ───────────────────────────────────────────────────
     text_body = (
-        "CrossLayer Alert: %s\n"
+        "%sCrossLayer Security Alert\n"
+        "%s\n\n"
+        "Rule:      %s\n"
         "Condition: %s\n"
-        "Time: %s\n\n"
-        "%d matching incident(s):\n%s"
-    ) % (rule.name, condition_label, now.strftime("%Y-%m-%d %H:%M:%S UTC"), count, rows_text)
+        "Severity:  %s\n"
+        "Time:      %s UTC\n"
+        "Incidents: %d\n\n"
+        "Breakdown  Critical:%d  High:%d  Medium:%d  Low:%d\n\n"
+        "Incidents:\n%s\n"
+        "Dashboard: http://localhost:4200/incidents\n"
+    ) % (
+        test_prefix, "-" * 40,
+        rule.name, condition_label, max_sev.upper(), ts_full, count,
+        sev_counts_map["critical"], sev_counts_map["high"],
+        sev_counts_map["medium"],   sev_counts_map["low"],
+        plain_list,
+    )
 
-    cfg     = get_settings()
+    cfg       = get_settings()
     from_addr = cfg.SMTP_FROM or cfg.SMTP_USER
 
-    msg             = MIMEMultipart("alternative")
-    msg["Subject"]  = subject
-    msg["From"]     = from_addr
-    msg["To"]       = rule.notify_target
+    msg            = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"]    = from_addr
+    msg["To"]      = rule.notify_target
     msg.attach(MIMEText(text_body, "plain"))
     msg.attach(MIMEText(html_body, "html"))
     return msg
@@ -158,15 +349,15 @@ def _send_email_sync(rule, incidents, now):
     # type: (AlertRule, List[Incident], datetime) -> None
     cfg = get_settings()
     if not cfg.SMTP_USER or not cfg.SMTP_PASS or cfg.SMTP_USER == "your_gmail@gmail.com":
-        logger.warning("SMTP not configured — skipping email for rule '%s'", rule.name)
+        logger.warning("SMTP not configured -- skipping email for rule '%s'", rule.name)
         return
-    msg = _build_email(rule, incidents, now)
+    msg = _build_email(rule, incidents, now, is_test=False)
     try:
         with smtplib.SMTP_SSL(cfg.SMTP_HOST, cfg.SMTP_PORT, timeout=10) as srv:
             srv.login(cfg.SMTP_USER, cfg.SMTP_PASS)
             srv.sendmail(cfg.SMTP_FROM or cfg.SMTP_USER, rule.notify_target, msg.as_string())
         logger.info(
-            "Alert email sent → %s | rule '%s' | %d incident(s)",
+            "Alert email sent -> %s | rule '%s' | %d incident(s)",
             rule.notify_target, rule.name, len(incidents),
         )
     except Exception as exc:
@@ -193,10 +384,10 @@ def evaluate_and_fire(db, incidents):
     # type: (Session, List[Incident]) -> int
     """Evaluate enabled alert rules against *incidents*.
 
-    - Skips rules inside their cooldown window.
-    - For each matching rule fires email (sync in thread) or webhook (daemon thread).
-    - Updates trigger_count and last_fired_at, then commits once.
-    - Returns the number of rules that actually fired.
+    Skips rules inside their cooldown window.
+    Fires email (background thread) or webhook for each matching rule.
+    Updates trigger_count and last_fired_at, commits once.
+    Returns the number of rules that fired.
     """
     if not incidents:
         return 0
@@ -217,11 +408,10 @@ def evaluate_and_fire(db, incidents):
     )
 
     for rule in rules:
-        # Cooldown guard
         if rule.last_fired_at and (now - rule.last_fired_at) < cooldown:
             remaining = int((cooldown - (now - rule.last_fired_at)).total_seconds() / 60)
             logger.info(
-                "Rule '%s' skipped — cooldown active (%d min remaining)", rule.name, remaining
+                "Rule '%s' skipped -- cooldown active (%d min remaining)", rule.name, remaining
             )
             continue
 
@@ -233,11 +423,9 @@ def evaluate_and_fire(db, incidents):
         if not matching:
             continue
 
-        # Fire in background so we don't block the HTTP response
         if rule.notify_method == "email" and rule.notify_target:
-            # Copy data needed for thread (ORM objects may expire after commit)
             snap = list(matching)
-            t    = threading.Thread(
+            t = threading.Thread(
                 target=_send_email_sync, args=(rule, snap, now), daemon=True
             )
             t.start()
@@ -254,7 +442,6 @@ def evaluate_and_fire(db, incidents):
             )
             t.start()
 
-        # Update stats
         rule.trigger_count = (rule.trigger_count or 0) + len(matching)
         rule.last_fired_at = now
         fired += 1

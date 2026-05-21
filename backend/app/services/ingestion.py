@@ -487,8 +487,22 @@ def ingest_cicids_csv(db: Session, csv_path: Optional[str] = None) -> int:
         raise
 
 
-def ingest_tda_csv(db: Session, csv_path: Optional[str] = None) -> int:
-    """Ingest TDA logs with entity extraction"""
+def ingest_tda_csv(db: Session, csv_path: Optional[str] = None, max_rows: int = 500_000) -> int:
+    """Ingest TDA database-access logs.
+
+    The TDA CSV contains only (user, table, timestamp) — no ground-truth label column.
+    Labels are assigned synthetically: ~15 % of rows are marked as anomalies using
+    a seeded random draw so results are reproducible.
+
+    ``max_rows`` caps ingestion to avoid blowing up the SQLite DB on the 30 M-row
+    TDA file.  The default (500 K) gives ~75 K anomalies which is plenty for the
+    simulation and dashboard.
+    """
+    import random as _random  # noqa: PLC0415
+
+    _rng = _random.Random(42)           # seeded → reproducible label assignment
+    ANOMALY_RATE = 0.15                 # synthetic anomaly fraction (~1 in 7 rows)
+
     if csv_path is None:
         s = get_settings()
         csv_path = _resolve_csv_file(
@@ -503,17 +517,49 @@ def ingest_tda_csv(db: Session, csv_path: Optional[str] = None) -> int:
                 "TDA CSV file not found. Set TDA_PATH in .env or place a file at "
                 "backend/data/tda/tda.csv (see config.Settings)."
             )
-    
+
     count = 0
     BATCH = 5000
     batch = []
     _now = datetime.utcnow
 
+    # Use raw SQL INSERT so this works with both the old 8-column schema and the
+    # new schema that adds message/confidence/metadata_json columns.
+    from sqlalchemy import text as _text  # noqa: PLC0415
+    import json as _json  # noqa: PLC0415
+
+    def _flush(rows: list) -> None:
+        # Try ORM-style first; fall back to raw SQL for old schema
+        try:
+            db.bulk_save_objects(rows)
+            db.commit()
+        except Exception:
+            db.rollback()
+            # Build raw dicts compatible with the 8-col schema
+            raw_dicts = []
+            for ev in rows:
+                raw_dicts.append({
+                    "ly": ev.layer, "src": ev.source, "ts": ev.timestamp,
+                    "ent": ev.entity, "raw": ev.raw,
+                    "feat": _json.dumps(ev.features) if isinstance(ev.features, dict) else ev.features,
+                    "lbl": ev.label,
+                })
+            db.execute(
+                _text("INSERT INTO log_events (layer, source, timestamp, entity, raw, features, label)"
+                      " VALUES (:ly,:src,:ts,:ent,:raw,:feat,:lbl)"),
+                raw_dicts,
+            )
+            db.commit()
+
     try:
         reader, _ = _csv_rows_from_path(csv_path)
         for row in reader:
+            if count >= max_rows:
+                break
+
             row = _normalize_row_keys(row)
 
+            # ── timestamp ─────────────────────────────────────────────────────
             timestamp = None
             for ts_field in ('timestamp', 'time', 'date', 'datetime', 'log_time'):
                 v = row.get(ts_field)
@@ -524,25 +570,16 @@ def ingest_tda_csv(db: Session, csv_path: Optional[str] = None) -> int:
             if not timestamp:
                 timestamp = _now()
 
-            message = ""
-            for msg_field in ("message", "msg", "log", "content", "text", "description"):
-                v = row.get(msg_field)
-                if v:
-                    message = str(v)
-                    break
-            if not message.strip():
-                u = _row_lookup(row, "user", "user_id", "username")
-                tbl = _row_lookup(row, "table", "table_id", "resource")
-                bits = []
-                if u is not None:
-                    bits.append(f"user={u}")
-                if tbl is not None:
-                    bits.append(f"table={tbl}")
-                message = " ".join(bits)
-
+            # ── entity (user ID is the natural entity for TDA) ────────────────
             entity = extract_entity_from_tda(row)
+            if not entity:
+                u = _row_lookup(row, "user", "user_id", "username")
+                if u is not None:
+                    entity = f"user:{u}"
 
-            label = 0
+            # ── synthetic label (TDA CSV has no ground-truth labels) ──────────
+            # First check for an explicit label column; fall back to random.
+            label = None
             for label_field in ('label', 'anomaly', 'is_anomaly', 'class', 'attack'):
                 v = row.get(label_field)
                 if v not in (None, ""):
@@ -553,7 +590,10 @@ def ingest_tda_csv(db: Session, csv_path: Optional[str] = None) -> int:
                         if str(v).lower() in ('anomaly', 'true', '1', 'yes', 'attack'):
                             label = 1
                             break
+            if label is None:
+                label = 1 if _rng.random() < ANOMALY_RATE else 0
 
+            # ── features ──────────────────────────────────────────────────────
             features: Dict[str, Any] = {"source": "TDA"}
             for k in ("user", "table", "user_id", "table_id"):
                 v = row.get(k)
@@ -564,7 +604,6 @@ def ingest_tda_csv(db: Session, csv_path: Optional[str] = None) -> int:
                 timestamp=timestamp,
                 layer="application",
                 source="TDA",
-                message=message.strip()[:1000] or None,
                 entity=entity,
                 label=label,
                 raw=_serialize_raw_row(row),
@@ -573,16 +612,15 @@ def ingest_tda_csv(db: Session, csv_path: Optional[str] = None) -> int:
             count += 1
 
             if len(batch) >= BATCH:
-                db.bulk_save_objects(batch)
-                db.commit()
-                logger.info("TDA ingested %d rows so far", count)
+                _flush(batch)
                 batch = []
+                if count % 100_000 == 0:
+                    logger.info("TDA ingested %d rows so far (max=%d)", count, max_rows)
 
         if batch:
-            db.bulk_save_objects(batch)
-            db.commit()
+            _flush(batch)
 
-        logger.info("TDA ingestion complete: %d rows", count)
+        logger.info("TDA ingestion complete: %d rows (limit=%d)", count, max_rows)
         return count
 
     except Exception as e:

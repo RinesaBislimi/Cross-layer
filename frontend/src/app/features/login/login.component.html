@@ -1,0 +1,84 @@
+<div class="login-page">
+  <div class="login-card">
+
+    <!-- Brand -->
+    <div class="brand">
+      <div class="brand-icon">CL</div>
+      <div>
+        <h1 class="brand-name">CrossLayer</h1>
+        <p class="brand-sub">Cross-Layer Security Analysis Platform</p>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab" [class.tab-active]="mode === 'login'" (click)="mode = 'login'; error = ''">Sign in</button>
+      <button class="tab" [class.tab-active]="mode === 'register'" (click)="mode = 'register'; error = ''">Create account</button>
+    </div>
+
+    <!-- Error banner -->
+    <div *ngIf="error" class="error-banner">
+      <span>⚠ {{ error }}</span>
+    </div>
+
+    <!-- Form -->
+    <form (ngSubmit)="submit()" class="form">
+
+      <!-- Full name (register only) -->
+      <div class="form-group" *ngIf="mode === 'register'">
+        <label class="form-label" for="fullname">Full name</label>
+        <input
+          id="fullname"
+          class="form-input"
+          type="text"
+          placeholder="Jane Smith"
+          [(ngModel)]="fullName"
+          name="fullname"
+          autocomplete="name"
+        />
+      </div>
+
+      <!-- Email -->
+      <div class="form-group">
+        <label class="form-label" for="email">Email address</label>
+        <input
+          id="email"
+          class="form-input"
+          type="email"
+          placeholder="you@company.com"
+          [(ngModel)]="email"
+          name="email"
+          required
+          autocomplete="email"
+        />
+      </div>
+
+      <!-- Password -->
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input
+          id="password"
+          class="form-input"
+          type="password"
+          [placeholder]="mode === 'register' ? 'Min. 6 characters' : 'Your password'"
+          [(ngModel)]="password"
+          name="password"
+          required
+          autocomplete="current-password"
+        />
+      </div>
+
+      <button type="submit" class="btn-submit" [disabled]="loading">
+        <span *ngIf="!loading">{{ mode === 'login' ? 'Sign in' : 'Create account' }}</span>
+        <span *ngIf="loading" class="spinner"></span>
+      </button>
+
+    </form>
+
+    <!-- First-user hint -->
+    <p *ngIf="mode === 'register'" class="hint">
+      The first registered account automatically becomes <strong>Admin</strong>.
+    </p>
+
+  </div>
+</div>

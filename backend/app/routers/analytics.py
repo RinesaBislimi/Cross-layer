@@ -359,10 +359,8 @@ class SendEmailRequest(BaseModel):
 
 @router.post("/send-alert-email")
 def send_alert_email(req: SendEmailRequest):
-    """Send a real email via SMTP. Requires SMTP_USER / SMTP_PASS in .env."""
-    cfg = get_settings()
-    smtp_host = cfg.SMTP_HOST
-    smtp_port = cfg.SMTP_PORT
+    """Send a test/real alert email via SMTP. Requires SMTP_USER / SMTP_PASS in .env."""
+    cfg       = get_settings()
     smtp_user = cfg.SMTP_USER
     smtp_pass = cfg.SMTP_PASS
     smtp_from = cfg.SMTP_FROM or smtp_user
@@ -373,47 +371,175 @@ def send_alert_email(req: SendEmailRequest):
             detail="SMTP not configured — fill SMTP_USER and SMTP_PASS in backend/.env then restart the server",
         )
 
+    now                = datetime.utcnow()
     condition_readable = req.condition.replace("_", " ").title()
-    tag = "[TEST] " if req.is_test else ""
-    subject = f"{tag}CrossLayer Alert: {req.rule_name}"
+    test_prefix        = "[TEST] " if req.is_test else ""
+    subject            = "%sCrossLayer Alert: %s" % (test_prefix, req.rule_name)
+    ts_short           = now.strftime("%b %d, %H:%M UTC")
+    ts_full            = now.strftime("%Y-%m-%d %H:%M:%S")
 
-    html_body = f"""
-<html><body style="font-family:sans-serif;color:#1e293b;max-width:540px;margin:0 auto">
-  <div style="background:#4f46e5;padding:20px 24px;border-radius:8px 8px 0 0">
-    <h2 style="color:#fff;margin:0;font-size:1.1rem">
-      {'🧪 Test Notification' if req.is_test else '🔔 CrossLayer Security Alert'}
-    </h2>
-  </div>
-  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-top:none;padding:20px 24px;border-radius:0 0 8px 8px">
-    <table style="width:100%;border-collapse:collapse">
-      <tr>
-        <td style="padding:6px 0;color:#64748b;font-size:.85rem;width:120px">Rule</td>
-        <td style="padding:6px 0;font-weight:600">{req.rule_name}</td>
-      </tr>
-      <tr>
-        <td style="padding:6px 0;color:#64748b;font-size:.85rem">Condition</td>
-        <td style="padding:6px 0">{condition_readable}</td>
-      </tr>
-      <tr>
-        <td style="padding:6px 0;color:#64748b;font-size:.85rem">Time</td>
-        <td style="padding:6px 0">{datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}</td>
-      </tr>
-    </table>
-    <p style="margin:16px 0 0;font-size:.8rem;color:#94a3b8">
-      {'This is a test notification. No real threat was detected.' if req.is_test else 'A condition defined in your CrossLayer alert rules has been triggered.'}
-    </p>
-  </div>
-</body></html>"""
+    test_notice_html = ""
+    if req.is_test:
+        test_notice_html = (
+            "<tr><td style='background:#fff;padding:0 28px 20px'>"
+            "<div style='border:1px dashed #cbd5e1;border-radius:6px;padding:10px 14px;"
+            "font-size:0.75rem;color:#64748b;text-align:center'>"
+            "This is a test notification. No real threat was detected."
+            "</div></td></tr>"
+        )
 
-    text_body = (
-        f"{'[TEST] ' if req.is_test else ''}CrossLayer Alert: {req.rule_name}\n\n"
-        f"Rule:      {req.rule_name}\n"
-        f"Condition: {condition_readable}\n"
-        f"Time:      {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}\n\n"
-        f"{'This is a test notification.' if req.is_test else 'A condition has been triggered in CrossLayer.'}"
+    html_body = """\
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+</head>
+<body style="margin:0;padding:0;background:#f1f5f9;
+             font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif">
+
+<div style="display:none;max-height:0;overflow:hidden;color:#f1f5f9">
+  {test_pfx}CrossLayer Alert: {rule_name} -- {condition} at {ts_short}
+</div>
+
+<table width="100%%" cellpadding="0" cellspacing="0"
+       style="background:#f1f5f9;padding:32px 16px">
+<tr><td align="center">
+<table width="520" cellpadding="0" cellspacing="0" style="max-width:520px;width:100%%">
+
+  <!-- HEADER -->
+  <tr>
+    <td style="background:#0f172a;border-radius:8px 8px 0 0;padding:22px 28px 20px">
+      <table width="100%%" cellpadding="0" cellspacing="0"><tr>
+        <td style="vertical-align:middle">
+          <div style="color:#f8fafc;font-size:0.9rem;font-weight:700;
+                       letter-spacing:-0.01em">CrossLayer</div>
+          <div style="color:#475569;font-size:0.65rem;margin-top:2px;
+                       text-transform:uppercase;letter-spacing:0.06em">Security Platform</div>
+        </td>
+        <td style="text-align:right;vertical-align:middle">
+          <span style="border:1px solid #334155;color:#94a3b8;font-size:0.65rem;
+                        font-weight:600;letter-spacing:0.06em;text-transform:uppercase;
+                        padding:4px 12px;border-radius:4px">{label_tag}</span>
+        </td>
+      </tr></table>
+
+      <div style="margin-top:20px;padding-top:18px;border-top:1px solid #1e293b">
+        <div style="color:#f8fafc;font-size:1.05rem;font-weight:700;line-height:1.3">
+          {alert_title}
+        </div>
+        <div style="color:#64748b;font-size:0.78rem;margin-top:5px">
+          Rule: <span style="color:#94a3b8">{rule_name}</span>
+          &nbsp;&middot;&nbsp;{ts_short}
+        </div>
+      </div>
+    </td>
+  </tr>
+
+  <!-- SUMMARY STRIP -->
+  <tr>
+    <td style="background:#1e293b;padding:14px 28px">
+      <table width="100%%" cellpadding="0" cellspacing="0"><tr>
+        <td style="vertical-align:middle;width:50%%;border-right:1px solid #334155;
+                    padding-right:20px">
+          <div style="color:#475569;font-size:0.6rem;text-transform:uppercase;
+                       letter-spacing:0.08em;font-weight:600;margin-bottom:2px">Condition</div>
+          <div style="color:#94a3b8;font-size:0.8rem;font-weight:500">{condition}</div>
+        </td>
+        <td style="vertical-align:middle;padding-left:20px">
+          <div style="color:#475569;font-size:0.6rem;text-transform:uppercase;
+                       letter-spacing:0.08em;font-weight:600;margin-bottom:2px">Triggered At</div>
+          <div style="color:#94a3b8;font-size:0.8rem;font-weight:500">{ts_short}</div>
+        </td>
+      </tr></table>
+    </td>
+  </tr>
+
+  <!-- DETAILS TABLE -->
+  <tr>
+    <td style="background:#ffffff;padding:22px 28px 20px">
+      <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;
+                   letter-spacing:0.1em;color:#94a3b8;margin-bottom:12px">Alert Details</div>
+      <table width="100%%" cellpadding="0" cellspacing="0"
+             style="border:1px solid #e2e8f0;border-radius:6px">
+        <tr>
+          <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;
+                      font-size:0.72rem;color:#64748b;width:100px">Rule Name</td>
+          <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;
+                      font-size:0.78rem;font-weight:600;color:#0f172a">{rule_name}</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;
+                      font-size:0.72rem;color:#64748b">Condition</td>
+          <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;
+                      font-size:0.75rem;color:#0f172a">{condition}</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 14px;font-size:0.72rem;color:#64748b">Time (UTC)</td>
+          <td style="padding:10px 14px;font-size:0.75rem;color:#0f172a">{ts_full}</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  {test_notice}
+
+  <!-- CTA -->
+  <tr>
+    <td style="background:#ffffff;padding:8px 28px 24px;
+               border-top:1px solid #f1f5f9;text-align:center">
+      <a href="http://localhost:4200/incidents"
+         style="display:inline-block;background:#0f172a;color:#f8fafc;
+                text-decoration:none;font-weight:600;font-size:0.78rem;
+                padding:11px 28px;border-radius:6px;letter-spacing:0.02em">
+        Open CrossLayer Dashboard
+      </a>
+    </td>
+  </tr>
+
+  <!-- FOOTER -->
+  <tr>
+    <td style="background:#f8fafc;border:1px solid #e2e8f0;border-top:none;
+               border-radius:0 0 8px 8px;padding:14px 28px">
+      <div style="font-size:0.64rem;color:#94a3b8;line-height:1.7">
+        CrossLayer Security Platform &middot; {ts_full} UTC<br>
+        Rule: <em>{rule_name}</em> &middot; Condition: {condition}
+      </div>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>""".format(
+        test_pfx    = test_prefix,
+        rule_name   = req.rule_name,
+        condition   = condition_readable,
+        ts_short    = ts_short,
+        ts_full     = ts_full,
+        label_tag   = "TEST ALERT" if req.is_test else "ALERT",
+        alert_title = ("Test -- %s" % req.rule_name) if req.is_test
+                      else ("Security Alert: %s" % req.rule_name),
+        test_notice = test_notice_html,
     )
 
-    msg = MIMEMultipart("alternative")
+    text_body = (
+        "%sCrossLayer Alert: %s\n"
+        "%s\n\n"
+        "Rule:      %s\n"
+        "Condition: %s\n"
+        "Time:      %s UTC\n\n"
+        "%s\n"
+        "Dashboard: http://localhost:4200/incidents\n"
+    ) % (
+        test_prefix, req.rule_name, "-" * 40,
+        req.rule_name, condition_readable, ts_full,
+        "This is a test notification. No real threat was detected." if req.is_test
+        else "An alert rule condition has been triggered in CrossLayer.",
+    )
+
+    msg            = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"]    = smtp_from
     msg["To"]      = req.to
@@ -421,7 +547,7 @@ def send_alert_email(req: SendEmailRequest):
     msg.attach(MIMEText(html_body, "html"))
 
     try:
-        with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=10) as server:
+        with smtplib.SMTP_SSL(cfg.SMTP_HOST, cfg.SMTP_PORT, timeout=10) as server:
             server.login(smtp_user, smtp_pass)
             server.sendmail(smtp_from, req.to, msg.as_string())
         logger.info("Alert email sent to %s for rule '%s'", req.to, req.rule_name)

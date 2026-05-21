@@ -400,4 +400,130 @@
     </div>
   </section>
 
+  <!-- ── Fix Labels utility ────────────────────────────────────────────────── -->
+  <section class="card step-section fix-labels-section">
+    <div class="step-header">
+      <span class="step-badge step-badge-fix">⚙</span>
+      <h2>Fix Anomaly Labels</h2>
+    </div>
+    <p class="step-desc">
+      If datasets were ingested with an older version of the code, all labels may be <code>NULL</code> and the
+      simulation will show 0 anomalies. Run this once to repair labels from the raw CSV data.
+    </p>
+    <div class="fix-row">
+      <button class="btn-action btn-fix" (click)="fixLabels()" [disabled]="fixLoading">
+        <span *ngIf="!fixLoading">🔧 Fix Labels Now</span>
+        <span *ngIf="fixLoading"><div class="spinner-sm"></div> Fixing…</span>
+      </button>
+      <span class="fix-result" *ngIf="fixResult">{{ fixResult }}</span>
+    </div>
+  </section>
+
+  <!-- ── Live Simulation ─────────────────────────────────────────────────── -->
+  <section class="card step-section sim-section">
+    <div class="step-header">
+      <span class="step-badge step-badge-sim">Live</span>
+      <h2>Real-Time Simulation</h2>
+      <span class="sim-live-pill" *ngIf="simRunning">
+        <span class="sim-dot"></span> Running
+      </span>
+    </div>
+
+    <p class="step-desc">
+      Replay your ingested dataset through the ML scoring pipeline at a controlled rate —
+      anomalies broadcast via WebSocket exactly as if live log shippers were feeding the system.
+    </p>
+
+    <div class="sim-error" *ngIf="simError">⚠ {{ simError }}</div>
+
+    <!-- Controls -->
+    <div class="sim-controls">
+      <div class="sim-row">
+        <div class="sim-field">
+          <label class="sim-label">Dataset layer</label>
+          <select class="form-select sim-select" [(ngModel)]="simLayer" [disabled]="simRunning">
+            <option *ngFor="let l of simLayers" [value]="l.value">{{ l.label }}</option>
+          </select>
+        </div>
+
+        <div class="sim-field">
+          <label class="sim-label">Rate (events / sec)</label>
+          <input class="form-input sim-input" type="number" min="1" max="500"
+                 [(ngModel)]="simRate" [disabled]="simRunning" />
+        </div>
+
+        <div class="sim-field">
+          <label class="sim-label">Max events</label>
+          <input class="form-input sim-input" type="number" min="10" max="5000"
+                 [(ngModel)]="simMax" [disabled]="simRunning" />
+        </div>
+
+        <div class="sim-field sim-check-field">
+          <label class="sim-check-label">
+            <input type="checkbox" [(ngModel)]="simAnomaliesOnly" [disabled]="simRunning" />
+            Anomalies only
+          </label>
+        </div>
+      </div>
+
+      <div class="sim-actions">
+        <button class="btn-action btn-sim-start" (click)="startSim()"
+                [disabled]="simRunning">
+          ▶ Start Simulation
+        </button>
+        <button class="btn-action btn-sim-stop" (click)="stopSim()"
+                [disabled]="!simRunning">
+          ■ Stop
+        </button>
+      </div>
+    </div>
+
+    <!-- Progress bar + stats -->
+    <div class="sim-progress-wrap" *ngIf="simStatus">
+      <div class="sim-progress-bar">
+        <div class="sim-progress-fill" [style.width.%]="simProgressPct()"></div>
+      </div>
+      <div class="sim-stats">
+        <span class="sim-stat">
+          <strong>{{ simStatus.sent }}</strong> / {{ simMax }} events sent
+        </span>
+        <span class="sim-stat sim-stat-anomaly">
+          <strong>{{ simStatus.anomalies }}</strong> anomalies detected
+        </span>
+        <span class="sim-stat" *ngIf="simStatus.elapsed_seconds != null">
+          {{ simStatus.elapsed_seconds }}s elapsed
+        </span>
+        <span class="sim-stat sim-stat-done" *ngIf="simStatus.finished_at && !simStatus.running">
+          Finished
+        </span>
+        <span class="sim-stat sim-stat-err" *ngIf="simStatus.error">
+          {{ simStatus.error }}
+        </span>
+      </div>
+    </div>
+
+    <p class="sim-tip">
+      Open <strong>Dashboard</strong> or <strong>Incidents</strong> in another tab
+      to watch anomalies arrive in real time while the simulation runs.
+    </p>
+
+    <!-- Clear simulated incidents sub-panel -->
+    <div class="sim-clear-panel">
+      <div class="sim-clear-header">
+        <span class="sim-clear-icon">🗑</span>
+        <div>
+          <strong>Clear simulated incidents</strong>
+          <span class="sim-clear-sub">Remove test data so real ML incidents are visible again</span>
+        </div>
+      </div>
+      <div class="fix-row">
+        <button class="btn-action btn-clear-sim" (click)="clearSimulatedIncidents()" [disabled]="clearSimLoading || simRunning">
+          <span *ngIf="!clearSimLoading">🗑 Clear Simulated Incidents</span>
+          <span *ngIf="clearSimLoading"><div class="spinner-sm"></div> Clearing…</span>
+        </button>
+        <span class="fix-result" *ngIf="clearSimResult">{{ clearSimResult }}</span>
+      </div>
+    </div>
+  </section>
+
 </div>

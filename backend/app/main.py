@@ -14,8 +14,12 @@ from sqlalchemy.orm import Session
 
 from .db import Base, engine, get_db, SessionLocal
 from .models import Incident, LogEvent  # noqa: F401 — register models on Base.metadata
-from .models.alert_rule import AlertRule  # noqa: F401 — register AlertRule table
+from .models.alert_rule import AlertRule   # noqa: F401 — register AlertRule table
+from .models.user import User              # noqa: F401 — register User table
+from .models.feedback import IncidentFeedback  # noqa: F401
+from .models.response_rule import ResponseRule  # noqa: F401
 from .routers import admin, analytics, alert_rules
+from .routers import auth, ingest, feedback, response_rules, simulate
 from .schemas import IncidentSchema, LogEventSchema
 from .services.correlation import correlate_entity_in_window
 from .ws import realtime
@@ -330,7 +334,12 @@ def get_stats(db: Session = Depends(get_db)) -> dict:
     return get_summary(db)
 
 
+app.include_router(auth.router)
+app.include_router(ingest.router)
 app.include_router(admin.router)
 app.include_router(analytics.router)
 app.include_router(alert_rules.router)
+app.include_router(feedback.router)
+app.include_router(response_rules.router)
+app.include_router(simulate.router)
 app.include_router(realtime.router)
