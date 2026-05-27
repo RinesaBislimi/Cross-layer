@@ -1,7 +1,3 @@
-"""Dataset replay simulator — streams existing log_events through the ML
-scoring pipeline at a configurable rate, broadcasting anomalies via WebSocket
-exactly as if the data were arriving live from a real log shipper.
-"""
 
 from __future__ import annotations
 
@@ -22,8 +18,6 @@ from ..models.log_events import LogEvent
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin", tags=["simulate"])
 
-# ── Global simulation state ───────────────────────────────────────────────────
-
 _sim_thread: Optional[threading.Thread] = None
 _sim_stop_event = threading.Event()
 
@@ -38,38 +32,20 @@ _sim_status: dict = {
     "error":         None,
 }
 
-
-# ── Pydantic schemas ──────────────────────────────────────────────────────────
-
 class SimulateRequest(BaseModel):
-    layer:           str   = "all"      # bgl | cicids | tda | all
-    rate:            float = 10.0       # events per second
-    max_events:      int   = 500        # cap to avoid flooding
-    only_anomalies:  bool  = False      # skip normal events, only stream label=1
-    replay_from_start: bool = True      # start from oldest event each time
-
-
-# ── Simulation worker ─────────────────────────────────────────────────────────
+    layer:           str   = "all"
+    rate:            float = 10.0
+    max_events:      int   = 500
+    only_anomalies:  bool  = False
+    replay_from_start: bool = True
 
 def _fetch_events_fast(conn, layer: str, label: int, limit: int) -> list[dict]:
-    """
-    Fetch events using raw SQL — no ORDER BY so the DB uses a primary-key scan
-    (insertion order), which is O(limit) not O(table_size).
-
-    On MySQL the query ``WHERE layer = X AND label = Y`` benefits from the
-    composite index ``idx_log_events_layer_label (layer, label)`` — create it with
-    ``CREATE INDEX idx_log_events_layer_label ON log_events (layer, label)``.
-    Without that index the query can degrade to O(table_size).
-    """
-    from sqlalchemy import text  # noqa: PLC0415
+    from sqlalchemy import text
 
     LAYER_MAP = {"bgl": "system", "cicids": "network", "tda": "application"}
     db_layer = LAYER_MAP.get(layer, layer) if layer != "all" else None
 
     if db_layer:
-        # USE INDEX forces the composite (layer, label) index so MySQL can seek
-        # directly to the right partition instead of scanning through other layers.
-        # Falls back gracefully on SQLite (which ignores USE INDEX syntax).
         try:
             sql = text(
                 "SELECT id, layer, source, entity, label, raw, features, timestamp "
@@ -78,7 +54,6 @@ def _fetch_events_fast(conn, layer: str, label: int, limit: int) -> list[dict]:
             )
             rows = conn.execute(sql, {"ly": db_layer, "lb": label, "lim": limit}).fetchall()
         except Exception:
-            # SQLite doesn't support USE INDEX — fall back to plain query
             sql = text(
                 "SELECT id, layer, source, entity, label, raw, features, timestamp "
                 "FROM log_events WHERE layer = :ly AND label = :lb LIMIT :lim"
@@ -100,18 +75,16 @@ def _fetch_events_fast(conn, layer: str, label: int, limit: int) -> list[dict]:
         for r in rows
     ]
 
-
 def _simulate_worker(
     layer: str,
     rate: float,
     max_events: int,
     only_anomalies: bool,
 ) -> None:
-    """Background thread: replay events, create Incident rows, broadcast via WebSocket."""
-    from ..ws.realtime import manager   # noqa: PLC0415
-    from ..models.incidents import Incident  # noqa: PLC0415
-    from sqlalchemy import text  # noqa: PLC0415
-    import json  # noqa: PLC0415
+    from ..ws.realtime import manager
+    from ..models.incidents import Incident
+    from sqlalchemy import text
+    import json
 
     _sim_status.update({
         "running": True, "sent": 0, "anomalies": 0,
@@ -148,7 +121,6 @@ def _simulate_worker(
 
         sleep_between = 1.0 / max(rate, 0.1)
 
-        # Batch of pending Incident objects — flushed every FLUSH_EVERY anomalies
         FLUSH_EVERY   = 5
         pending_incs: list = []
 
@@ -164,12 +136,11 @@ def _simulate_worker(
             if ev_label == 1:
                 _sim_status["anomalies"] += 1
 
-                now       = datetime.utcnow()   # always use wall-clock time
+                now       = datetime.utcnow()
                 severity  = "high" if confidence > 0.8 else "medium"
                 ev_layer  = ev["layer"] or layer
                 entity    = ev["entity"] or ev_layer
 
-                # ── 1. Broadcast live WS message ──────────────────────────────
                 manager.broadcast_sync({
                     "type":       "log_anomaly",
                     "layer":      ev_layer,
@@ -181,8 +152,6 @@ def _simulate_worker(
                     "simulated":  True,
                 })
 
-                # ── 2. Create Incident record (start_time = NOW so it sorts
-                #       to the top of the incidents list, not buried in 2005) ─
                 incident = Incident(
                     entity     = entity,
                     type       = f"Simulated {ev_layer.title()} Anomaly",
@@ -200,11 +169,9 @@ def _simulate_worker(
                 )
                 pending_incs.append(incident)
 
-                # ── 3. Flush batch to DB + broadcast incident notification ───
                 if len(pending_incs) >= FLUSH_EVERY:
                     db.add_all(pending_incs)
                     db.commit()
-                    # Broadcast so dashboard/incidents auto-refresh
                     manager.broadcast_sync({
                         "type":     "incident_batch",
                         "count":    len(pending_incs),
@@ -216,7 +183,6 @@ def _simulate_worker(
 
             time.sleep(sleep_between)
 
-        # Flush any remaining incidents
         if pending_incs:
             db.add_all(pending_incs)
             db.commit()
@@ -239,19 +205,8 @@ def _simulate_worker(
         _sim_status["running"]     = False
         _sim_status["finished_at"] = datetime.utcnow().isoformat()
 
-
-# ── Endpoints ─────────────────────────────────────────────────────────────────
-
 @router.post("/simulate/start")
 def start_simulation(payload: SimulateRequest):
-    """Start replaying dataset events through the ML pipeline in real time.
-
-    Events are fetched from the database (already ingested via Step 1),
-    re-scored through the trained ML model, and broadcast via WebSocket
-    as if they were arriving live from a log shipper.
-
-    Anomalies appear on the dashboard in real time.
-    """
     global _sim_thread
 
     if _sim_status["running"]:
@@ -282,19 +237,15 @@ def start_simulation(payload: SimulateRequest):
         "message":    f"Replaying up to {payload.max_events} events at {payload.rate}/s. Watch the dashboard for live anomalies.",
     }
 
-
 @router.post("/simulate/stop")
 def stop_simulation():
-    """Stop a running simulation."""
     if not _sim_status["running"]:
         raise HTTPException(status_code=409, detail="No simulation is currently running.")
     _sim_stop_event.set()
     return {"status": "stopping", "sent_so_far": _sim_status["sent"]}
 
-
 @router.get("/simulate/status")
 def simulation_status():
-    """Get current simulation state."""
     elapsed = None
     if _sim_status["started_at"]:
         start = datetime.fromisoformat(_sim_status["started_at"])

@@ -6,7 +6,7 @@
   gap: 1.25rem;
 }
 
-/* ── Stats row ───────────────────────────────────────────── */
+
 .stats-row {
   display: flex;
   gap: 1rem;
@@ -41,7 +41,7 @@
   font-weight: 500;
 }
 
-/* ── Hover bar ───────────────────────────────────────────── */
+
 .hover-bar {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -63,7 +63,7 @@
 }
 .hover-icon { color: var(--accent); font-size: 0.9rem; }
 
-/* ── Grid card ───────────────────────────────────────────── */
+
 .grid-card {
   padding: 1.5rem;
   overflow-x: auto;
@@ -76,7 +76,7 @@
   min-width: 720px;
 }
 
-/* Hour labels row */
+
 .hour-labels {
   display: flex;
   align-items: center;
@@ -98,7 +98,7 @@
   flex-shrink: 0;
 }
 
-/* Grid rows */
+
 .grid-rows {
   display: flex;
   flex-direction: column;
@@ -140,7 +140,7 @@
   border-color: rgba(0, 0, 0, 0.2);
 }
 
-/* ── Legend ──────────────────────────────────────────────── */
+
 .legend {
   display: flex;
   align-items: center;
@@ -173,7 +173,7 @@
   flex: 1;
 }
 
-/* ── States ──────────────────────────────────────────────── */
+
 .state-center {
   display: flex;
   flex-direction: column;

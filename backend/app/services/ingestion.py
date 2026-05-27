@@ -1,4 +1,3 @@
-# services/ingestion.py
 import codecs
 import csv
 import json
@@ -14,18 +13,10 @@ from ..models import LogEvent, RAW_MAX_LENGTH
 
 logger = logging.getLogger(__name__)
 
-
 def _backend_root() -> Path:
-    """Parent of ``app/`` (the backend project directory that contains ``data/``)."""
     return Path(__file__).resolve().parent.parent.parent
 
-
 def _resolve_csv_file(*candidates: str) -> Optional[str]:
-    """
-    Return the first path that exists. Tries, in order:
-    absolute path, path relative to backend root, path relative to cwd.
-    Matches ``config.Settings`` defaults like ``data/bgl/bgl.csv``.
-    """
     for rel in candidates:
         if not rel or not str(rel).strip():
             continue
@@ -39,9 +30,7 @@ def _resolve_csv_file(*candidates: str) -> Optional[str]:
                 return str(q)
     return None
 
-
 def _detect_encoding(path: str) -> str:
-    """Detect file encoding by inspecting the first 4 bytes (BOM detection only)."""
     with open(path, "rb") as f:
         head = f.read(4)
     if head.startswith(codecs.BOM_UTF8):
@@ -50,25 +39,14 @@ def _detect_encoding(path: str) -> str:
         return "utf-16"
     return "utf-8"
 
-
 def _csv_rows_from_path(path: str) -> Tuple[Iterator[Dict[str, Any]], str]:
-    """
-    Return (streaming iterator of row dicts, delimiter used).
-
-    Opens the file as a *stream* so the entire CSV is never loaded into memory.
-    Delimiter is detected from the first line only.
-    """
     encoding = _detect_encoding(path)
-    # Peek at the first line to detect delimiter without reading the whole file
     with open(path, encoding=encoding, errors="replace", newline="") as f:
         first_line = f.readline()
     delimiter = "," if "," in first_line else "\t" if "\t" in first_line else ";"
 
-    # Return a live file handle wrapped in DictReader — caller iterates it
-    # We use a generator so the file is closed after exhaustion
     def _stream():
         with open(path, encoding=encoding, errors="replace", newline="") as fh:
-            # Strip NUL chars inline via a generator wrapper
             reader = csv.DictReader(
                 (line.replace("\x00", "") for line in fh),
                 delimiter=delimiter,
@@ -77,27 +55,20 @@ def _csv_rows_from_path(path: str) -> Tuple[Iterator[Dict[str, Any]], str]:
 
     return _stream(), delimiter
 
-
 def _normalize_row_keys(row: Dict[str, Any]) -> Dict[str, Any]:
-    """Strip CSV header whitespace so 'Label ' and 'Label' match."""
     return {str(k).strip(): v for k, v in row.items()}
 
-
 def _row_lookup(row: Dict[str, Any], *names: str) -> Optional[Any]:
-    """First non-empty value for any of the candidate column names (exact, after strip)."""
     for name in names:
         if name in row and row[name] is not None and str(row[name]).strip() != "":
             return row[name]
     return None
 
-
 def _serialize_raw_row(row: Dict[str, Any]) -> str:
-    """Stable JSON for DB `raw` (LogEvent.raw); never use invalid kwarg `raw_data`."""
     try:
         return json.dumps(row, default=str, ensure_ascii=False)[:RAW_MAX_LENGTH]
     except Exception:
         return str(row)[:RAW_MAX_LENGTH]
-
 
 def _parse_datetime_general(val: Any) -> Optional[datetime]:
     if val is None:
@@ -122,12 +93,9 @@ def _parse_datetime_general(val: Any) -> Optional[datetime]:
     except ValueError:
         return None
 
-
 def _bgl_timestamp_from_log_text(text: str) -> Optional[datetime]:
-    """Parse BGL-style timestamps embedded in log lines."""
     if not text:
         return None
-    # e.g. 2005-06-03-15.42.50.363779
     m = re.search(
         r"(\d{4})-(\d{2})-(\d{2})-(\d{2})\.(\d{2})\.(\d{2})\.(\d+)",
         text,
@@ -135,16 +103,13 @@ def _bgl_timestamp_from_log_text(text: str) -> Optional[datetime]:
     if m:
         y, mo, d, h, mi, s, _frac = m.groups()
         return datetime(int(y), int(mo), int(d), int(h), int(mi), int(s))
-    # e.g. 2005.06.03 at start
     m2 = re.search(r"(\d{4})\.(\d{2})\.(\d{2})", text)
     if m2:
         y, mo, d = m2.groups()
         return datetime(int(y), int(mo), int(d))
     return None
 
-
 def _infer_cicids_label(row: Dict[str, Any]) -> int:
-    """0 = benign/normal, 1 = attack / anomaly (handles Label, Attack Type, etc.)."""
     for key in ("Label", "label", "Attack Type", "attack_type", "Label "):
         if key not in row or row[key] is None:
             continue
@@ -167,97 +132,60 @@ def _infer_cicids_label(row: Dict[str, Any]) -> int:
     return 0
 
 def extract_entity_from_bgl(message: str, row: dict) -> Optional[str]:
-    """
-    Extract entity (IP, hostname, node ID) from BGL logs
-    BGL logs often contain node names, IPs, or hostnames
-    """
-    # CSV exports often use node_id (see scripts/bgl_log_to_csv.py)
     if "node_id" in row and row["node_id"]:
         return str(row["node_id"]).strip()
-    # Try common BGL fields
     if 'node' in row and row['node']:
         return row['node']
     if 'host' in row and row['host']:
         return row['host']
     if 'ip' in row and row['ip']:
         return row['ip']
-    
-    # Try to extract from message
     if message:
-        # Look for IP addresses
         ip_pattern = r'\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b'
         ip_match = re.search(ip_pattern, message)
         if ip_match:
             return ip_match.group()
-        
-        # Look for hostnames (simplified)
         hostname_pattern = r'\b[a-zA-Z0-9][a-zA-Z0-9\-]{1,62}\.(?:com|org|net|local|edu|gov)\b'
         hostname_match = re.search(hostname_pattern, message)
         if hostname_match:
             return hostname_match.group()
-        
-        # Look for node IDs (e.g., node001, server-01, etc.)
         node_pattern = r'\b(?:node|server|host|vm)[\-_]?[0-9]+\b'
         node_match = re.search(node_pattern, message, re.IGNORECASE)
         if node_match:
             return node_match.group()
-    
     return None
 
-
 def extract_entity_from_cicids(row: dict) -> Optional[str]:
-    """
-    Extract entity from CICIDS network logs
-    Usually source IP or destination IP
-    """
-    # Try different field names that might contain IPs
     for field in ['Src IP', 'Source IP', 'src_ip', 'source_ip', 'Source']:
         if field in row and row[field]:
             return str(row[field]).strip()
-    
     for field in ['Dst IP', 'Dest IP', 'dst_ip', 'dest_ip', 'Destination']:
         if field in row and row[field]:
             return str(row[field]).strip()
-    
-    # Look for entity field
     if 'entity' in row and row['entity']:
         return str(row['entity']).strip()
 
-    # Reduced exports may omit IPs; weak correlation key for cross-layer demos
     dp = _row_lookup(row, "Destination Port", "destination port")
     if dp is not None and str(dp).strip():
         return f"dst-port:{str(dp).strip()}"
 
     return None
 
-
 def extract_entity_from_tda(row: dict) -> Optional[str]:
-    """
-    Extract entity from TDA application logs
-    Usually user ID, session ID, or application name
-    """
-    # Try common fields
     for field in ['user_id', 'user', 'username', 'uid', 'userid']:
         if field in row and row[field]:
             return row[field]
-    
     for field in ['session_id', 'session', 'sid']:
         if field in row and row[field]:
             return row[field]
-    
     for field in ['app_id', 'app_name', 'application', 'service']:
         if field in row and row[field]:
             return row[field]
-    
-    # Look for entity field
     if 'entity' in row and row['entity']:
         return row['entity']
-    
     return None
 
-
 def ingest_bgl_csv(db: Session, csv_path: Optional[str] = None) -> int:
-    """Ingest BGL logs with entity extraction"""
     if csv_path is None:
         s = get_settings()
         csv_path = _resolve_csv_file(
@@ -272,7 +200,6 @@ def ingest_bgl_csv(db: Session, csv_path: Optional[str] = None) -> int:
                 "BGL CSV file not found. Set BGL_PATH in .env or place a file at "
                 "backend/data/bgl/bgl.csv (see config.Settings)."
             )
-    
     count = 0
     BATCH = 5000
     batch = []
@@ -281,7 +208,6 @@ def ingest_bgl_csv(db: Session, csv_path: Optional[str] = None) -> int:
         reader, _ = _csv_rows_from_path(csv_path)
         for row in reader:
             row = _normalize_row_keys(row)
-            # Extract timestamp
             timestamp = None
             for ts_field in ('timestamp', 'time', 'date', 'datetime', 'log_time'):
                 v = row.get(ts_field)
@@ -290,7 +216,6 @@ def ingest_bgl_csv(db: Session, csv_path: Optional[str] = None) -> int:
                     if timestamp:
                         break
 
-            # Extract message (BGL exports use log_message — see data/bgl/bgl.csv)
             message = ""
             for msg_field in ("log_message", "message", "msg", "log", "content", "text"):
                 v = row.get(msg_field)
@@ -305,8 +230,6 @@ def ingest_bgl_csv(db: Session, csv_path: Optional[str] = None) -> int:
 
             entity = extract_entity_from_bgl(message, row)
 
-            # In the existing bgl.csv the 'timestamp' column holds the BGL alert flag:
-            # '-' = normal (0), anything else = anomaly type (1).
             label = 0
             raw_ts_field = row.get("timestamp", "").strip()
             if raw_ts_field and raw_ts_field != "-" and _parse_datetime_general(raw_ts_field) is None:
@@ -358,9 +281,7 @@ def ingest_bgl_csv(db: Session, csv_path: Optional[str] = None) -> int:
         db.rollback()
         raise
 
-
 def ingest_cicids_csv(db: Session, csv_path: Optional[str] = None) -> int:
-    """Ingest CICIDS logs with entity extraction"""
     if csv_path is None:
         s = get_settings()
         csv_path = _resolve_csv_file(
@@ -375,7 +296,6 @@ def ingest_cicids_csv(db: Session, csv_path: Optional[str] = None) -> int:
                 "CICIDS CSV file not found. Set CICIDS_PATH in .env or place a file at "
                 "backend/data/cicids/cicids.csv (see config.Settings)."
             )
-    
     _CICIDS_NUM_COLS = (
         "Destination Port", "Flow Duration", "Total Fwd Packets",
         "Total Length of Fwd Packets", "Fwd Packet Length Max",
@@ -398,7 +318,7 @@ def ingest_cicids_csv(db: Session, csv_path: Optional[str] = None) -> int:
     count = 0
     BATCH = 5000
     batch = []
-    _now = datetime.utcnow  # local alias avoids global lookup in hot loop
+    _now = datetime.utcnow
 
     try:
         reader, _ = _csv_rows_from_path(csv_path)
@@ -486,22 +406,11 @@ def ingest_cicids_csv(db: Session, csv_path: Optional[str] = None) -> int:
         db.rollback()
         raise
 
-
 def ingest_tda_csv(db: Session, csv_path: Optional[str] = None, max_rows: int = 500_000) -> int:
-    """Ingest TDA database-access logs.
+    import random as _random
 
-    The TDA CSV contains only (user, table, timestamp) — no ground-truth label column.
-    Labels are assigned synthetically: ~15 % of rows are marked as anomalies using
-    a seeded random draw so results are reproducible.
-
-    ``max_rows`` caps ingestion to avoid blowing up the SQLite DB on the 30 M-row
-    TDA file.  The default (500 K) gives ~75 K anomalies which is plenty for the
-    simulation and dashboard.
-    """
-    import random as _random  # noqa: PLC0415
-
-    _rng = _random.Random(42)           # seeded → reproducible label assignment
-    ANOMALY_RATE = 0.15                 # synthetic anomaly fraction (~1 in 7 rows)
+    _rng = _random.Random(42)
+    ANOMALY_RATE = 0.15
 
     if csv_path is None:
         s = get_settings()
@@ -523,19 +432,15 @@ def ingest_tda_csv(db: Session, csv_path: Optional[str] = None, max_rows: int = 
     batch = []
     _now = datetime.utcnow
 
-    # Use raw SQL INSERT so this works with both the old 8-column schema and the
-    # new schema that adds message/confidence/metadata_json columns.
-    from sqlalchemy import text as _text  # noqa: PLC0415
-    import json as _json  # noqa: PLC0415
+    from sqlalchemy import text as _text
+    import json as _json
 
     def _flush(rows: list) -> None:
-        # Try ORM-style first; fall back to raw SQL for old schema
         try:
             db.bulk_save_objects(rows)
             db.commit()
         except Exception:
             db.rollback()
-            # Build raw dicts compatible with the 8-col schema
             raw_dicts = []
             for ev in rows:
                 raw_dicts.append({
@@ -559,7 +464,6 @@ def ingest_tda_csv(db: Session, csv_path: Optional[str] = None, max_rows: int = 
 
             row = _normalize_row_keys(row)
 
-            # ── timestamp ─────────────────────────────────────────────────────
             timestamp = None
             for ts_field in ('timestamp', 'time', 'date', 'datetime', 'log_time'):
                 v = row.get(ts_field)
@@ -570,15 +474,12 @@ def ingest_tda_csv(db: Session, csv_path: Optional[str] = None, max_rows: int = 
             if not timestamp:
                 timestamp = _now()
 
-            # ── entity (user ID is the natural entity for TDA) ────────────────
             entity = extract_entity_from_tda(row)
             if not entity:
                 u = _row_lookup(row, "user", "user_id", "username")
                 if u is not None:
                     entity = f"user:{u}"
 
-            # ── synthetic label (TDA CSV has no ground-truth labels) ──────────
-            # First check for an explicit label column; fall back to random.
             label = None
             for label_field in ('label', 'anomaly', 'is_anomaly', 'class', 'attack'):
                 v = row.get(label_field)
@@ -593,7 +494,6 @@ def ingest_tda_csv(db: Session, csv_path: Optional[str] = None, max_rows: int = 
             if label is None:
                 label = 1 if _rng.random() < ANOMALY_RATE else 0
 
-            # ── features ──────────────────────────────────────────────────────
             features: Dict[str, Any] = {"source": "TDA"}
             for k in ("user", "table", "user_id", "table_id"):
                 v = row.get(k)

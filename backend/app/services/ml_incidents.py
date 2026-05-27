@@ -1,10 +1,3 @@
-"""
-ML-based incident generation: score log events with trained layer models (joblib),
-then group high-scoring events into incidents by entity + time bucket.
-
-Faster than rule-based correlation for large tables because it uses bounded scans,
-keyset pagination, and vectorized ``predict_proba`` per batch.
-"""
 
 from __future__ import annotations
 
@@ -32,7 +25,6 @@ from .ml_models import load_model
 
 logger = logging.getLogger(__name__)
 
-
 def _resolve_model_path(rel: str) -> Optional[Path]:
     if not rel:
         return None
@@ -44,11 +36,9 @@ def _resolve_model_path(rel: str) -> Optional[Path]:
         return q
     return None
 
-
 def _window_floor(ts: datetime, merge_minutes: int) -> datetime:
     m = max(1, int(merge_minutes))
     return ts.replace(minute=(ts.minute // m) * m, second=0, microsecond=0)
-
 
 def _features_bgl(e: LogEvent) -> Dict[str, Any]:
     text = e.raw or ""
@@ -66,9 +56,7 @@ def _features_bgl(e: LogEvent) -> Dict[str, Any]:
         "has_ras": int('"ras"' in lower or " ras " in lower),
     }
 
-
 def _features_cicids(e: LogEvent) -> Dict[str, Any]:
-    """Extract CICIDS numerical features stored in LogEvent.features."""
     import json
     feat_json = e.features or {}
     if isinstance(feat_json, str):
@@ -84,14 +72,11 @@ def _features_cicids(e: LogEvent) -> Dict[str, Any]:
             row[safe] = f if np.isfinite(f) else 0.0
         except (TypeError, ValueError):
             row[safe] = 0.0
-    # Legacy fallback
     if all(row.get(s, 0) == 0 for s in CICIDS_FEATURE_COLS):
         row["text_len"] = len(e.raw or "")
     return row
 
-
 def _features_tda(e: LogEvent) -> Dict[str, Any]:
-    """Extract TDA behavioural features stored in LogEvent.features."""
     import json
     feat_json = e.features or {}
     if isinstance(feat_json, str):
@@ -113,11 +98,9 @@ def _features_tda(e: LogEvent) -> Dict[str, Any]:
         "table_id": table_id,
         "hour_of_day": ts.hour if ts else 0,
         "day_of_week": ts.weekday() if ts else 0,
-        # access counts are not available per-event during scoring; use 0
         "user_access_count": 0,
         "table_access_count": 0,
     }
-
 
 def _anomaly_proba(model: Any, X: pd.DataFrame, feature_cols: List[str]) -> np.ndarray:
     Xf = X[feature_cols].fillna(0).astype(float)
@@ -130,26 +113,17 @@ def _anomaly_proba(model: Any, X: pd.DataFrame, feature_cols: List[str]) -> np.n
         return probas[:, 0]
     if 1 in classes:
         return probas[:, classes.index(1)]
-    # binary with classes [0,1] ordered — fall back to last column (positive in sklearn convention)
     return probas[:, -1]
-
 
 def _source_time_window(
     db: Session, source: str, lookback_hours: int
 ) -> Tuple[datetime, datetime]:
-    """Resolve [start, end] for a specific log source.
-
-    Anchors to the source's own latest timestamp so datasets from different
-    calendar years (BGL=2006, CICIDS=2017, TDA=varies) are each scanned within
-    their own time range rather than the global DB maximum.
-    """
     max_ts = (
         db.query(func.max(LogEvent.timestamp))
         .filter(LogEvent.source == source)
         .scalar()
     )
     if max_ts is None:
-        # No data for this source — return an empty range
         dummy = datetime(1970, 1, 1)
         return dummy, dummy
 
@@ -164,7 +138,6 @@ def _source_time_window(
         start = min_ts
     return start, end
 
-
 def generate_ml_incidents(
     db: Session,
     *,
@@ -175,17 +148,6 @@ def generate_ml_incidents(
     merge_window_minutes: int = 15,
     fallback_to_label: bool = True,
 ) -> Dict[str, Any]:
-    """
-    Load per-layer models when present; score events in batches; create one incident per
-    (entity_bucket, time_floor) that contains at least one event with score >= threshold.
-
-    If a model file is missing and ``fallback_to_label`` is True, uses ``LogEvent.label == 1``
-    for that source instead (still grouped into incidents).
-
-    Time windows are resolved **per source** so that datasets from different calendar years
-    (e.g. BGL=2006, CICIDS=2017) are each scanned within their own recent history rather
-    than being excluded by the global DB max timestamp.
-    """
     if lookback_hours <= 0:
         raise ValueError("lookback_hours must be > 0")
     if not 0 < probability_threshold <= 1:
@@ -203,7 +165,6 @@ def generate_ml_incidents(
         ("TDA", "TDA", TDA_FEATURE_COLS, settings.TDA_MODEL_PATH, _features_tda),
     ]
 
-    # (entity_key, window_floor) -> list of (event_id, score, source, layer, ts)
     buckets: DefaultDict[Tuple[str, datetime], List[Tuple[int, float, str, str, datetime]]] = (
         defaultdict(list)
     )
@@ -229,15 +190,11 @@ def generate_ml_incidents(
         if mode == "skipped":
             continue
 
-        # Per-source time window: each dataset is anchored to its own latest timestamp.
-        # This is essential when datasets span different years (BGL=2006, CICIDS=2017, etc.)
         src_start, src_end = _source_time_window(db, log_source, lookback_hours)
         if src_start == src_end:
-            # No data for this source
             per_source[source_name].update({"scanned": 0, "hits": 0, "mode": "no_data"})
             continue
 
-        # Track global time range for reporting
         if overall_start is None or src_start < overall_start:
             overall_start = src_start
         if overall_end is None or src_end > overall_end:

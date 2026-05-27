@@ -1,6 +1,6 @@
 <div class="response-rules-page">
 
-  <!-- Header -->
+
   <div class="page-header">
     <div>
       <h1>Automated Response</h1>
@@ -9,19 +9,19 @@
     <button class="btn-primary" (click)="openForm()">+ New Rule</button>
   </div>
 
-  <!-- Notice -->
+
   <div class="notice-banner">
     <span class="notice-icon">⚡</span>
     <span>Response rules execute automatically server-side after every incident generation batch. Actions include webhooks, email notifications, and logged enforcement actions.</span>
   </div>
 
-  <!-- Load error -->
+
   <div *ngIf="loadError" class="form-error" style="margin:0">
     <span>⚠ {{ loadError }}</span>
     <button class="btn-secondary" style="margin-left:1rem;padding:0.25rem 0.75rem;font-size:0.75rem" (click)="loadRules()">Retry</button>
   </div>
 
-  <!-- Add form -->
+
   <div *ngIf="showForm" class="card form-card">
     <h2 class="form-title">New Response Rule</h2>
 
@@ -31,21 +31,21 @@
 
     <div class="form-grid">
 
-      <!-- Name -->
+
       <div class="form-group form-group-full">
         <label class="form-label">Rule name <span class="required">*</span></label>
         <input class="form-input" type="text" placeholder="e.g. Block IP on critical network incident"
                [(ngModel)]="newRule.name" />
       </div>
 
-      <!-- Description -->
+
       <div class="form-group form-group-full">
         <label class="form-label">Description</label>
         <input class="form-input" type="text" placeholder="Optional notes about this rule"
                [(ngModel)]="newRule.description" />
       </div>
 
-      <!-- Condition -->
+
       <div class="form-group">
         <label class="form-label">Trigger condition <span class="required">*</span></label>
         <select class="form-select" [(ngModel)]="newRule.condition">
@@ -53,7 +53,7 @@
         </select>
       </div>
 
-      <!-- Layer -->
+
       <div class="form-group">
         <label class="form-label">Layer filter</label>
         <select class="form-select" [(ngModel)]="newRule.layer">
@@ -61,7 +61,7 @@
         </select>
       </div>
 
-      <!-- Action type -->
+
       <div class="form-group">
         <label class="form-label">Action <span class="required">*</span></label>
         <select class="form-select" [(ngModel)]="newRule.action_type">
@@ -69,7 +69,7 @@
         </select>
       </div>
 
-      <!-- Action target (webhook URL / email) -->
+
       <div class="form-group" *ngIf="needsTarget(newRule.action_type)">
         <label class="form-label">
           {{ newRule.action_type === 'webhook' ? 'Webhook URL' : 'Email address' }}
@@ -80,7 +80,7 @@
                [(ngModel)]="newRule.action_target" />
       </div>
 
-      <!-- Webhook payload template -->
+
       <div class="form-group form-group-full" *ngIf="newRule.action_type === 'webhook'">
         <label class="form-label">Payload template (JSON)</label>
         <input class="form-input" type="text"
@@ -96,7 +96,7 @@
     </div>
   </div>
 
-  <!-- Rules list -->
+
   <div *ngIf="rules.length > 0" class="rules-list">
     <div *ngFor="let rule of rules" class="rule-card card" [class.rule-disabled]="!rule.enabled">
 
@@ -111,7 +111,7 @@
         <button class="btn-delete" (click)="deleteRule(rule.id)" title="Delete">✕</button>
       </div>
 
-      <!-- Condition + action -->
+
       <div class="rule-meta">
         <span class="cond-badge">{{ conditionLabel(rule.condition) }}</span>
         <span class="arrow">→</span>
@@ -121,15 +121,15 @@
         <span *ngIf="rule.layer" class="layer-chip">{{ layerLabel(rule.layer) }}</span>
       </div>
 
-      <!-- Description -->
+
       <p *ngIf="rule.description" class="rule-description">{{ rule.description }}</p>
 
-      <!-- Target -->
+
       <div *ngIf="rule.action_target" class="rule-target">
         Target: <span class="target-value">{{ rule.action_target }}</span>
       </div>
 
-      <!-- Stats -->
+
       <div class="rule-bottom">
         <span class="trigger-count">{{ rule.trigger_count }} trigger{{ rule.trigger_count !== 1 ? 's' : '' }}</span>
         <span class="last-fired" [class.fired-never]="!rule.last_fired_at">
@@ -138,7 +138,7 @@
         <span class="created-at">Created {{ formatDate(rule.created_at) }}</span>
       </div>
 
-      <!-- Test row -->
+
       <div class="rule-test-row">
         <button class="btn-test" (click)="testRule(rule)" [disabled]="!rule.enabled">
           ▶ Test now
@@ -154,7 +154,7 @@
     </div>
   </div>
 
-  <!-- Empty state -->
+
   <div *ngIf="rules.length === 0 && !showForm && !loading && !loadError" class="empty-state card">
     <span class="empty-icon">⚡</span>
     <h3>No response rules yet</h3>
@@ -162,7 +162,7 @@
     <button class="btn-primary" (click)="openForm()">+ Create First Rule</button>
   </div>
 
-  <!-- Loading -->
+
   <div *ngIf="loading" class="empty-state card">
     <p style="color:var(--text-muted)">Loading rules…</p>
   </div>

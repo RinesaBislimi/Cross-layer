@@ -1,5 +1,3 @@
-"""Cross-Layer API: public routes here; ingest/train/incident-generation in ``routers.admin``."""
-
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Optional
@@ -13,11 +11,11 @@ from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
 
 from .db import Base, engine, get_db, SessionLocal
-from .models import Incident, LogEvent  # noqa: F401 — register models on Base.metadata
-from .models.alert_rule import AlertRule   # noqa: F401 — register AlertRule table
-from .models.user import User              # noqa: F401 — register User table
-from .models.feedback import IncidentFeedback  # noqa: F401
-from .models.response_rule import ResponseRule  # noqa: F401
+from .models import Incident, LogEvent
+from .models.alert_rule import AlertRule
+from .models.user import User
+from .models.feedback import IncidentFeedback
+from .models.response_rule import ResponseRule
 from .routers import admin, analytics, alert_rules
 from .routers import auth, ingest, feedback, response_rules, simulate
 from .schemas import IncidentSchema, LogEventSchema
@@ -27,22 +25,11 @@ from .ws import realtime
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# ── Persistent file-based stats cache ────────────────────────────────────────
-# Heavy GROUP BY queries on 56 M rows saturate MySQL and block all other
-# connections.  We therefore NEVER run them at request time.  Instead:
-#
-#   • On startup: load a pre-computed JSON file (if it exists) — instant.
-#   • POST /admin/compute-stats: runs the slow queries once, stores result.
-#   • GET  /summary: returns the file cache + a few always-fast queries.
-#
-# Run /admin/compute-stats once after first ingest to populate layer data.
-
 _STATS_DIR  = Path(__file__).resolve().parent.parent / "data"
 _STATS_FILE = _STATS_DIR / "stats_cache.json"
 
-_stats_cache: Optional[dict] = None   # loaded from file on startup
-_stats_computing = False               # guard against concurrent /admin/compute-stats
-
+_stats_cache: Optional[dict] = None
+_stats_computing = False
 
 def _load_stats_file() -> Optional[dict]:
     try:
@@ -52,7 +39,6 @@ def _load_stats_file() -> Optional[dict]:
         logger.warning("Could not read stats cache file: %s", exc)
     return None
 
-
 def _save_stats_file(data: dict) -> None:
     try:
         _STATS_DIR.mkdir(parents=True, exist_ok=True)
@@ -60,9 +46,7 @@ def _save_stats_file(data: dict) -> None:
     except Exception as exc:
         logger.warning("Could not write stats cache file: %s", exc)
 
-
 def _compute_heavy_stats(db: Session) -> dict:
-    """Run the slow GROUP BY queries on log_events.  May take minutes."""
     result: dict = {"logs_by_source": [], "logs_by_layer": [], "total_anomalies": 0}
     try:
         rows = db.execute(text(
@@ -93,9 +77,6 @@ def _compute_heavy_stats(db: Session) -> dict:
 
     return result
 
-
-# ── Application ───────────────────────────────────────────────────────────────
-
 app = FastAPI(title="Cross-Layer Log Analysis API")
 
 app.add_middleware(
@@ -108,7 +89,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 @app.on_event("startup")
 def on_startup() -> None:
@@ -126,7 +106,6 @@ def on_startup() -> None:
         logger.error("Error during startup: %s", e)
         raise
 
-    # Load pre-computed heavy stats from file (instant if file exists)
     cached = _load_stats_file()
     if cached:
         _stats_cache = cached
@@ -141,19 +120,15 @@ def on_startup() -> None:
             "POST /admin/compute-stats is called."
         )
 
-
-# ── Health / diagnostics ──────────────────────────────────────────────────────
-
 @app.get("/debug/db", tags=["health"])
 def debug_db(db: Session = Depends(get_db)) -> dict:
-    """Diagnostic: fast DB checks only (no full-table scans)."""
-    from .config import get_settings  # noqa
+    from .config import get_settings
     s = get_settings()
     result: dict = {"database_url": s.DATABASE_URL[:40] + "…", "queries": {}}
     for label, sql in [
         ("log_events_approx", "SELECT TABLE_ROWS FROM information_schema.TABLES WHERE TABLE_NAME='log_events' AND TABLE_SCHEMA=DATABASE()"),
-        ("incidents_count",   "SELECT COUNT(*) FROM incidents"),
-        ("anomalies_approx",  "SELECT COUNT(*) FROM log_events WHERE label = 1 LIMIT 1"),
+        ("incidents_count", "SELECT COUNT(*) FROM incidents"),
+        ("anomalies_approx", "SELECT COUNT(*) FROM log_events WHERE label = 1 LIMIT 1"),
     ]:
         try:
             rows = db.execute(text(sql)).fetchall()
@@ -161,7 +136,6 @@ def debug_db(db: Session = Depends(get_db)) -> dict:
         except Exception as e:
             result["queries"][label] = f"ERROR: {e}"
     return result
-
 
 @app.get("/health", tags=["health"])
 def health_check(db: Session = Depends(get_db)) -> dict:
@@ -171,9 +145,6 @@ def health_check(db: Session = Depends(get_db)) -> dict:
     except Exception as e:
         db_status = f"error: {str(e)}"
     return {"status": "ok", "database": db_status}
-
-
-# ── Logs & incidents ──────────────────────────────────────────────────────────
 
 @app.get("/logs", response_model=List[LogEventSchema], tags=["logs"])
 def list_logs(
@@ -189,7 +160,6 @@ def list_logs(
         query = query.filter(LogEvent.source == source)
     return query.order_by(LogEvent.timestamp.desc()).limit(limit).all()
 
-
 @app.get("/incidents", response_model=List[IncidentSchema], tags=["incidents"])
 def list_incidents(
     limit: int = 100,
@@ -203,7 +173,6 @@ def list_incidents(
         .limit(limit)
         .all()
     )
-
 
 @app.get("/incidents/{incident_id}/events", response_model=List[LogEventSchema], tags=["incidents"])
 def get_incident_events(
@@ -237,7 +206,6 @@ def get_incident_events(
         .all()
     )
 
-
 @app.post("/correlate/{entity}", response_model=IncidentSchema, tags=["incidents"])
 def correlate_entity(
     entity: str,
@@ -251,18 +219,8 @@ def correlate_entity(
         raise HTTPException(status_code=404, detail="No cross-layer incident found")
     return incident
 
-
-# ── Stats ─────────────────────────────────────────────────────────────────────
-
 @app.get("/summary", tags=["stats"])
 def get_summary(db: Session = Depends(get_db)) -> dict:
-    """Dashboard stats.
-
-    Fast queries (information_schema + incidents table) run every time.
-    Heavy layer/source breakdown comes from a pre-computed file cache.
-    Run ``POST /admin/compute-stats`` once after first ingest to populate
-    the layer cards.
-    """
     result: dict = {
         "total_logs": 0,
         "total_anomalies": 0,
@@ -273,13 +231,11 @@ def get_summary(db: Session = Depends(get_db)) -> dict:
         "incidents_by_mode": [],
     }
 
-    # Overlay pre-computed heavy stats if available
     if _stats_cache:
         result["logs_by_layer"]   = _stats_cache.get("logs_by_layer",  [])
         result["logs_by_source"]  = _stats_cache.get("logs_by_source", [])
         result["total_anomalies"] = _stats_cache.get("total_anomalies", 0)
 
-    # Approximate total — information_schema is instant even on 56 M rows
     try:
         approx = db.execute(text(
             "SELECT TABLE_ROWS FROM information_schema.TABLES "
@@ -289,7 +245,6 @@ def get_summary(db: Session = Depends(get_db)) -> dict:
     except Exception as e:
         logger.error("summary total_logs failed: %s", e)
 
-    # Incidents table has ~206 rows — these three queries are fast
     try:
         result["total_incidents"] = int(
             db.execute(text("SELECT COUNT(*) FROM incidents")).scalar() or 0
@@ -327,12 +282,9 @@ def get_summary(db: Session = Depends(get_db)) -> dict:
     )
     return result
 
-
 @app.get("/stats", tags=["stats"])
 def get_stats(db: Session = Depends(get_db)) -> dict:
-    """Alias for /summary — kept for backwards compatibility."""
     return get_summary(db)
-
 
 app.include_router(auth.router)
 app.include_router(ingest.router)

@@ -6,7 +6,7 @@
   gap: 1.25rem;
 }
 
-/* ── Summary row ─────────────────────────────────────────── */
+
 .summary-row {
   display: flex;
   gap: 1rem;
@@ -44,14 +44,14 @@
   font-weight: 500;
 }
 
-/* ── Chain list ──────────────────────────────────────────── */
+
 .chains-list {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
 }
 
-/* ── Chain card ──────────────────────────────────────────── */
+
 .chain-card {
   display: flex;
   flex-direction: column;
@@ -59,7 +59,7 @@
   transition: box-shadow 0.15s, border-color 0.15s;
 }
 
-/* Card header */
+
 .chain-header {
   display: flex;
   align-items: center;
@@ -83,7 +83,7 @@
   flex-shrink: 0;
 }
 
-/* Risk badge */
+
 .risk-badge {
   display: inline-flex;
   align-items: center;
@@ -106,7 +106,7 @@
 .risk-medium   { background: #fefce8; color: #854d0e; border-color: #fde68a; }
 .risk-low      { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
 
-/* Cross-layer pill */
+
 .cross-layer-pill {
   background: linear-gradient(135deg, #7c3aed, #4f46e5);
   color: #fff;
@@ -117,21 +117,21 @@
   border-radius: 999px;
 }
 
-/* Entity */
+
 .chain-entity {
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--text);
 }
 
-/* Time */
+
 .chain-time {
   font-size: 0.72rem;
   color: var(--text-muted);
   white-space: nowrap;
 }
 
-/* Expand button */
+
 .btn-expand {
   background: var(--bg-hover);
   border: 1px solid var(--border);
@@ -148,7 +148,7 @@
   color: var(--accent);
 }
 
-/* Layer row */
+
 .layer-row {
   display: flex;
   align-items: center;
@@ -162,7 +162,7 @@
   color: var(--text-muted);
 }
 
-/* ── Timeline ────────────────────────────────────────────── */
+
 .timeline {
   position: relative;
   display: flex;
@@ -249,7 +249,7 @@
   color: var(--text-muted);
 }
 
-/* ── States ──────────────────────────────────────────────── */
+
 .state-center {
   display: flex;
   flex-direction: column;

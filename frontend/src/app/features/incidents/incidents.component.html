@@ -4,10 +4,22 @@
       <h1>Cross-layer incidents</h1>
       <p class="subtitle">Correlated anomalies across system, network and application layers</p>
     </div>
-    <button type="button" class="btn" (click)="load()">↻ Refresh</button>
+    <div style="display:flex;align-items:center;gap:0.6rem;">
+      <button
+        type="button"
+        class="btn-voice"
+        [class.btn-voice--muted]="voice.isMuted"
+        [title]="voice.isMuted ? 'Voice alerts muted — click to unmute' : 'Voice alerts on — click to mute'"
+        (click)="voice.toggleMute()"
+        *ngIf="voice.isSupported">
+        {{ voice.isMuted ? '🔇' : '🔔' }}
+        <span>{{ voice.isMuted ? 'Muted' : 'Voice On' }}</span>
+      </button>
+      <button type="button" class="btn" (click)="load()">↻ Refresh</button>
+    </div>
   </header>
 
-  <!-- Severity summary pills -->
+
   <div class="severity-summary" *ngIf="allIncidents.length">
     <button class="sev-pill all-pill" [class.active]="severityFilter===''" (click)="severityFilter=''">
       All <span class="sev-count">{{ allIncidents.length }}</span>
@@ -18,7 +30,7 @@
     </button>
   </div>
 
-  <!-- Search -->
+
   <div class="search-wrap card">
     <span class="search-icon">🔍</span>
     <input type="text" class="search-input" placeholder="Search entity or incident type…"
@@ -30,7 +42,7 @@
   <div class="loading-row" *ngIf="loading"><div class="spinner"></div> Loading incidents…</div>
 
   <div class="split-layout" *ngIf="!loading && filteredIncidents.length">
-    <!-- List -->
+
     <div class="incident-list">
       <article class="card incident-card" *ngFor="let inc of filteredIncidents"
                (click)="selectIncident(inc)" [class.selected]="selected?.id === inc.id">
@@ -68,7 +80,7 @@
       </article>
     </div>
 
-    <!-- Detail panel -->
+
     <aside class="detail-panel card" *ngIf="selected">
       <div class="detail-header">
         <h2>Incident detail</h2>
@@ -118,7 +130,7 @@
         </div>
       </div>
 
-      <!-- Timeline -->
+
       <div class="timeline-section">
         <h3>Event timeline</h3>
         <div class="loading-row" *ngIf="loadingEvents"><div class="spinner"></div> Loading events…</div>
@@ -144,7 +156,7 @@
         </div>
       </div>
 
-      <!-- Analyst Feedback -->
+
       <div class="feedback-section">
         <h3>Analyst Verdict</h3>
         <div class="feedback-row">
@@ -170,7 +182,7 @@
         <span *ngIf="feedbackLabel(selected)" class="feedback-saved">{{ feedbackLabel(selected) }}</span>
       </div>
 
-      <!-- AI Explanation -->
+
       <div class="ai-section">
         <div class="ai-section-head">
           <h3>AI Analysis</h3>
@@ -183,7 +195,7 @@
         <pre class="ai-result" *ngIf="aiExplanation">{{ aiExplanation }}</pre>
       </div>
 
-      <!-- Raw attributes -->
+
       <div class="attrs-section" *ngIf="selected.attributes">
         <h3>Attributes</h3>
         <pre class="attrs-json">{{ selected.attributes | json }}</pre>

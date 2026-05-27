@@ -9,7 +9,7 @@
 }
 .btn:hover { background: #4338ca; }
 
-/* Stats row */
+
 .stats-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .stat-chip {
   padding: 0.3rem 0.75rem; border-radius: 20px; font-size: 0.8rem;
@@ -20,7 +20,7 @@
 .normal-chip  { background: #f0fdf4; border-color: #86efac; color: var(--success); }
 .muted-chip   { color: var(--text-muted); }
 
-/* Filters */
+
 .filters { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1rem; }
 .search-wrap { position: relative; display: flex; align-items: center; flex: 1; min-width: 200px; }
 .search-icon { position: absolute; left: 0.75rem; font-size: 0.9rem; pointer-events: none; color: var(--text-muted); }
@@ -39,7 +39,7 @@
 }
 .filters select:focus, .filters input:focus { outline: none; border-color: var(--accent); }
 
-/* Chips */
+
 .chip-group { display: flex; gap: 0.4rem; }
 .chip {
   padding: 0.3rem 0.75rem; border-radius: 20px; border: 1px solid var(--border);
@@ -51,12 +51,12 @@
 .chip-anomaly.active { border-color: var(--danger); color: var(--danger); background: #fff1f2; }
 .chip-normal.active  { border-color: var(--success); color: var(--success); background: #f0fdf4; }
 
-/* Loading */
+
 .loading-row { display: flex; align-items: center; gap: 0.5rem; color: var(--text-muted); padding: 1rem; }
 .spinner { width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Table */
+
 .table-wrap { overflow-x: auto; padding: 0; }
 .log-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 .log-table th {
@@ -72,17 +72,17 @@
 .log-table .raw { max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); font-size: 0.78rem; }
 .log-table .expand-col { color: var(--text-muted); font-size: 0.7rem; text-align: center; }
 
-/* Row states */
+
 .row-anomaly td { background: #fff8f8; }
 .row-anomaly:hover td { background: #fff1f2 !important; }
 .row-expanded td { background: #eef2ff !important; border-bottom: none !important; }
 
-/* Label badge */
+
 .label-badge { font-size: 0.7rem; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 20px; white-space: nowrap; }
 .label-anomaly { background: #fee2e2; color: var(--danger); }
 .label-normal  { background: #dcfce7; color: var(--success); }
 
-/* ── Detail row ──────────────────────────────────────────────────────────── */
+
 .detail-row td { padding: 0 !important; border-bottom: 2px solid var(--accent) !important; }
 .detail-panel {
   background: #f5f6ff; padding: 1rem 1.25rem;
@@ -90,7 +90,7 @@
   border-left: 3px solid var(--accent);
 }
 
-/* ── Anomaly reason block ─────────────────────────────────────────────────── */
+
 .anomaly-reason-block {
   background: #fff8f8; border: 1px solid #fca5a5; border-radius: 10px;
   padding: 0.85rem 1rem; display: flex; flex-direction: column; gap: 0.7rem;
@@ -111,7 +111,7 @@
   min-width: 130px; padding-top: 0.15rem; flex-shrink: 0;
 }
 
-/* Confidence bar */
+
 .conf-bar-wrap {
   flex: 1; height: 8px; background: #fee2e2; border-radius: 4px;
   overflow: hidden; min-width: 80px; margin-top: 0.35rem; max-width: 180px;
@@ -129,7 +129,7 @@
 .conf-val.conf-medium   { color: #a16207; }
 .conf-val.conf-low      { color: #166534; }
 
-/* Detected signals */
+
 .signal-list { display: flex; flex-wrap: wrap; gap: 0.4rem; }
 .signal-chip {
   display: inline-flex; align-items: center; gap: 0.3rem;
@@ -137,7 +137,7 @@
   background: #fff1f2; color: #b91c1c; border: 1px solid #fca5a5;
 }
 
-/* Top features */
+
 .feat-list { display: flex; flex-direction: column; gap: 0.3rem; flex: 1; }
 .feat-row {
   display: flex; align-items: center; gap: 0.5rem; font-size: 0.78rem;
@@ -168,7 +168,7 @@
   padding-top: 0.35rem; border-top: 1px solid var(--border);
 }
 
-/* Pagination */
+
 .pagination { display: flex; align-items: center; gap: 0.75rem; justify-content: center; padding: 0.5rem 0; }
 .btn-page {
   padding: 0.4rem 0.9rem; background: var(--bg-card); border: 1px solid var(--border);

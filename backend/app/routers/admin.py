@@ -1,4 +1,3 @@
-"""Operational endpoints: ingest datasets, train models, incident generation, AI analysis."""
 
 import logging
 from pathlib import Path
@@ -24,22 +23,18 @@ router = APIRouter(tags=["admin"])
 
 _MODEL_TYPE_ERR = f"model_type must be one of: {', '.join(SUPPORTED_MODEL_TYPES)}"
 
-
 def _broadcast_incident_batch(incidents: list) -> None:
-    """Fire-and-forget WebSocket broadcast for newly created incidents."""
     if not incidents:
         return
     try:
         import asyncio
         from ..ws.realtime import manager
 
-        # Count by severity
         sev_counts: dict = {}
         for inc in incidents:
             s = (inc.severity or "unknown").lower()
             sev_counts[s] = sev_counts.get(s, 0) + 1
 
-        # Pick the most severe example to broadcast details about
         sev_order = ["critical", "high", "medium", "low", "unknown"]
         sample = next(
             (i for s in sev_order for i in incidents if (i.severity or "").lower() == s),
@@ -64,7 +59,6 @@ def _broadcast_incident_batch(incidents: list) -> None:
     except Exception as exc:
         logger.debug("WS broadcast skipped: %s", exc)
 
-
 @router.post("/admin/ingest/bgl")
 def api_ingest_bgl(db: Session = Depends(get_db)) -> dict:
     try:
@@ -74,7 +68,6 @@ def api_ingest_bgl(db: Session = Depends(get_db)) -> dict:
     except Exception as e:
         logger.error("Error ingesting BGL: %s", e)
         raise HTTPException(status_code=500, detail=str(e)) from e
-
 
 @router.post("/admin/ingest/cicids")
 def api_ingest_cicids(db: Session = Depends(get_db)) -> dict:
@@ -86,7 +79,6 @@ def api_ingest_cicids(db: Session = Depends(get_db)) -> dict:
         logger.error("Error ingesting CICIDS: %s", e)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
-
 @router.post("/admin/ingest/tda")
 def api_ingest_tda(db: Session = Depends(get_db)) -> dict:
     try:
@@ -96,7 +88,6 @@ def api_ingest_tda(db: Session = Depends(get_db)) -> dict:
     except Exception as e:
         logger.error("Error ingesting TDA: %s", e)
         raise HTTPException(status_code=500, detail=str(e)) from e
-
 
 @router.post("/admin/train/bgl")
 def api_train_bgl(
@@ -115,7 +106,6 @@ def api_train_bgl(
         logger.error("Error training BGL: %s", e)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
-
 @router.post("/admin/train/cicids")
 def api_train_cicids(
     db: Session = Depends(get_db),
@@ -133,7 +123,6 @@ def api_train_cicids(
         logger.error("Error training CICIDS: %s", e)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
-
 @router.post("/admin/train/tda")
 def api_train_tda(
     db: Session = Depends(get_db),
@@ -150,7 +139,6 @@ def api_train_tda(
     except Exception as e:
         logger.error("Error training TDA: %s", e)
         raise HTTPException(status_code=500, detail=str(e)) from e
-
 
 @router.post("/admin/train/cross-layer")
 def api_train_cross_layer(
@@ -176,20 +164,17 @@ def api_train_cross_layer(
         logger.error("Error training cross-layer: %s", e)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
-
 @router.get("/admin/common-entities")
 def api_common_entities(
     min_layers: int = 2,
     limit: int = 50,
     db: Session = Depends(get_db),
 ) -> List[dict]:
-    """Entities that appear in multiple layers (candidates for correlation)."""
     try:
         return find_common_entities(db, min_layers=min_layers, limit=limit)
     except Exception as e:
         logger.error("Error finding common entities: %s", e)
         raise HTTPException(status_code=500, detail=str(e)) from e
-
 
 @router.post("/admin/incidents/generate")
 def api_generate_incidents(
@@ -203,11 +188,6 @@ def api_generate_incidents(
     max_events_per_incident: int = 2000,
     db: Session = Depends(get_db),
 ) -> dict:
-    """Generate cross-layer incidents from log_events.
-
-    ``correlation_mode``: ``entity`` (same ``entity`` across layers) or ``time_cooccurrence``
-    (multi-layer activity in the same time bucket; ``entity`` on the incident is null).
-    """
     if correlation_mode not in ("entity", "time_cooccurrence"):
         raise HTTPException(
             status_code=400,
@@ -244,7 +224,6 @@ def api_generate_incidents(
         )
         logger.info("Generated incidents: %s", result)
 
-        # Evaluate alert rules + response rules against newly created incidents
         try:
             created_count = result.get("created", 0) if isinstance(result, dict) else 0
             if created_count > 0:
@@ -258,7 +237,6 @@ def api_generate_incidents(
                 if fired:
                     logger.info("Alert rules fired: %d rule(s) triggered", fired)
 
-                # Evaluate automated response rules
                 try:
                     from ..services.response_service import evaluate_and_respond
                     resp_fired = evaluate_and_respond(db, recent)
@@ -267,7 +245,6 @@ def api_generate_incidents(
                 except Exception as _re:
                     logger.warning("Response rule evaluation failed: %s", _re)
 
-                # Broadcast summary via WebSocket
                 _broadcast_incident_batch(recent)
         except Exception as _ae:
             logger.warning("Alert evaluation failed (non-fatal): %s", _ae)
@@ -282,7 +259,6 @@ def api_generate_incidents(
         logger.error("Unexpected error generating incidents: %s", exc, exc_info=True)
         raise HTTPException(status_code=500, detail=f"Internal error: {str(exc)}") from exc
 
-
 @router.post("/admin/incidents/generate-ml")
 def api_generate_incidents_ml(
     lookback_hours: int = 168,
@@ -293,15 +269,6 @@ def api_generate_incidents_ml(
     fallback_to_label: bool = True,
     db: Session = Depends(get_db),
 ) -> dict:
-    """
-    Generate incidents using trained layer models (``models/*.pkl``) and batched scoring.
-
-    Much faster than pure rule correlation on huge tables: scans each source with a row limit
-    and keyset pagination. If a model file is missing, uses ``LogEvent.label == 1`` when
-    ``fallback_to_label`` is true.
-
-    Train first: ``POST /admin/train/bgl``, ``/admin/train/cicids``, ``/admin/train/tda``.
-    """
     total_logs = db.query(func.count(LogEvent.id)).scalar() or 0
     if total_logs == 0:
         raise HTTPException(
@@ -320,7 +287,6 @@ def api_generate_incidents_ml(
         )
         logger.info("ML incidents: %s", result.get("created"))
 
-        # Evaluate alert rules + response rules against newly created incidents
         try:
             created_count = result.get("created", 0) if isinstance(result, dict) else 0
             if created_count > 0:
@@ -351,12 +317,10 @@ def api_generate_incidents_ml(
         logger.error("ML incident generation failed: %s", exc, exc_info=True)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-
 @router.get("/admin/debug/paths")
 def api_debug_paths() -> dict:
-    """Show exactly where each model is expected and where training saves files."""
-    from ..services.training import _resolve_model_path  # noqa: PLC0415
-    import os  # noqa: PLC0415
+    from ..services.training import _resolve_model_path
+    import os
 
     settings = get_settings()
     br = _backend_root()
@@ -383,10 +347,8 @@ def api_debug_paths() -> dict:
         },
     }
 
-
 @router.get("/admin/model-status")
 def api_model_status() -> List[dict]:
-    """Return which trained model files exist and their sizes."""
     settings = get_settings()
     backend_root = _backend_root()
 
@@ -413,25 +375,17 @@ def api_model_status() -> List[dict]:
         })
     return result
 
-
-# ── AI / LLM endpoints ────────────────────────────────────────────────────────
-
 @router.post("/admin/analyze/incident/{incident_id}")
 def api_analyze_incident(
     incident_id: int,
     db: Session = Depends(get_db),
 ) -> dict:
-    """Use Claude to explain a cross-layer incident in natural language.
-
-    Requires ANTHROPIC_API_KEY set in environment / .env file.
-    """
-    from ..services.llm_service import explain_incident  # lazy import
+    from ..services.llm_service import explain_incident
 
     incident = db.query(Incident).filter(Incident.id == incident_id).first()
     if incident is None:
         raise HTTPException(status_code=404, detail=f"Incident {incident_id} not found")
 
-    # Collect associated log events (capped to avoid huge prompts)
     events_q = (
         db.query(LogEvent)
         .filter(LogEvent.timestamp >= incident.start_time, LogEvent.timestamp <= incident.end_time)
@@ -472,20 +426,13 @@ def api_analyze_incident(
         logger.error("LLM incident analysis failed: %s", exc, exc_info=True)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-
 @router.post("/admin/analyze/log/{log_id}")
 def api_analyze_log(
     log_id: int,
     body: dict = Body(default={}),
     db: Session = Depends(get_db),
 ) -> dict:
-    """Use the LLM to explain why a specific log event was flagged as anomalous.
-
-    Accepts an optional JSON body: {"signals": ["SYN flood indicator: 72 SYN flags", ...]}
-    These pre-detected heuristic signals are forwarded to the LLM prompt so the
-    explanation is pinned to the exact indicators already shown in the UI.
-    """
-    from ..services.llm_service import explain_log_event  # lazy import
+    from ..services.llm_service import explain_log_event
 
     log = db.query(LogEvent).filter(LogEvent.id == log_id).first()
     if log is None:
@@ -503,7 +450,6 @@ def api_analyze_log(
         "confidence": log.confidence,
         "message":    log.message,
         "features":   log.features,
-        # Send full raw text — the LLM prompt already caps it at 800 chars
         "raw":        log.raw or "",
     }
 
@@ -516,17 +462,15 @@ def api_analyze_log(
         logger.error("LLM log analysis failed: %s", exc, exc_info=True)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-
 @router.post("/admin/chat/stream")
 def api_chat_stream(
     body: dict = Body(...),
     db: Session = Depends(get_db),
 ):
-    """Streaming SSE endpoint — yields tokens as they are generated."""
-    import json as _json  # noqa: PLC0415
-    from fastapi.responses import StreamingResponse  # noqa: PLC0415
-    from ..services.llm_service import stream_chat  # noqa: PLC0415
-    from ..config import get_settings  # noqa: PLC0415
+    import json as _json
+    from fastapi.responses import StreamingResponse
+    from ..services.llm_service import stream_chat
+    from ..config import get_settings
 
     question = (body.get("question") or "").strip()
     if not question:
@@ -554,28 +498,17 @@ def api_chat_stream(
         },
     )
 
-
-
 @router.post("/admin/enrich-entities")
 def api_enrich_entities(
     limit: int = 10000,
     db: Session = Depends(get_db),
 ) -> dict:
-    """Semantic entity enrichment — extract IP addresses, hostnames, and user IDs
-    from raw log text and write them to the entity field.
+    import re
 
-    This dramatically improves cross-layer correlation because different layers
-    (BGL, CICIDS, TDA) use different entity formats. After enrichment, events
-    that share an IP/hostname can be correlated across layers.
-    """
-    import re  # noqa: PLC0415
-
-    # Regex patterns for common entity types
     ip_pattern       = re.compile(r"\b(\d{1,3}(?:\.\d{1,3}){3})\b")
     hostname_pattern = re.compile(r"\b([a-zA-Z][a-zA-Z0-9\-]{2,30}\.[a-zA-Z]{2,6})\b")
     user_pattern     = re.compile(r"(?:user[=: ]+|uid[=: ]+|username[=: ]+|USER[=: ]+)([a-zA-Z0-9_\-\.@]{3,40})", re.I)
 
-    # Only process events without entity values
     events = (
         db.query(LogEvent)
         .filter(
@@ -597,25 +530,21 @@ def api_enrich_entities(
 
         entity = None
 
-        # Priority 1: explicit user in message
         m = user_pattern.search(raw)
         if m:
             entity = m.group(1)
             usr_found += 1
 
-        # Priority 2: first non-private IP
         if not entity:
             for ip_match in ip_pattern.findall(raw):
                 parts = ip_match.split(".")
                 if len(parts) == 4:
                     first = int(parts[0])
-                    # Skip private / loopback
                     if first not in (10, 127) and not (first == 172 and 16 <= int(parts[1]) <= 31) and not (first == 192 and int(parts[1]) == 168):
                         entity = ip_match
                         ip_found += 1
                         break
 
-        # Priority 3: hostname-looking token
         if not entity:
             m = hostname_pattern.search(raw)
             if m:
@@ -640,24 +569,12 @@ def api_enrich_entities(
         "hostname_extracted": host_found,
     }
 
-
 @router.post("/admin/fix-labels")
 def api_fix_labels(db: Session = Depends(get_db)) -> dict:
-    """Fix NULL/incorrect labels in the database.
-
-    Uses a single-pass CASE WHEN SQL UPDATE per layer — fast even on millions of rows.
-
-    CICIDS  : label derived from 'Normal Traffic' substring in raw JSON.
-    BGL     : label derived from FATAL/FAILURE/machine-check keywords in raw log text.
-    TDA     : synthetic ~15% anomaly rate via SQLite RANDOM() (no ground-truth labels in CSV).
-    """
-    from sqlalchemy import text  # noqa: PLC0415
+    from sqlalchemy import text
 
     results: dict = {}
 
-    # ── 1. CICIDS — single scan, CASE WHEN (no double pass) ────────────────────
-    # raw JSON ends with: ...'Normal Traffic'... → label 0
-    #                     ...'DoS'... or other attack → label 1
     cicids_rows = db.execute(
         text("""
             UPDATE log_events
@@ -671,10 +588,6 @@ def api_fix_labels(db: Session = Depends(get_db)) -> dict:
     results["cicids_updated"] = cicids_rows
     logger.info("fix-labels: CICIDS → %d rows updated", cicids_rows)
 
-    # ── 2. BGL — keyword detection from stored raw log text ─────────────────────
-    # BGL plain-text entries with FATAL, FAILURE, or machine check are anomalies;
-    # everything else is normal. Matches ~18% of rows (vs dataset's ~10%),
-    # which is acceptable for a demo system.
     bgl_rows = db.execute(
         text("""
             UPDATE log_events
@@ -691,10 +604,6 @@ def api_fix_labels(db: Session = Depends(get_db)) -> dict:
     results["bgl_note"] = "BGL labels derived from FATAL/FAILURE/machine-check keywords in raw log text"
     logger.info("fix-labels: BGL → %d rows updated", bgl_rows)
 
-    # ── 3. TDA — synthetic anomaly labels (no ground-truth in CSV) ─────────────
-    # Mark every 7th row (id % 7 = 0 → ≈14.3%) as anomaly.
-    # Uses the primary-key modulo so it is deterministic AND compatible with both
-    # SQLite (id % 7) and MySQL (id % 7).  No ORDER BY needed.
     tda_rows = db.execute(
         text("""
             UPDATE log_events
@@ -708,7 +617,6 @@ def api_fix_labels(db: Session = Depends(get_db)) -> dict:
 
     db.commit()
 
-    # ── Final count ─────────────────────────────────────────────────────────────
     dist = db.execute(
         text("SELECT layer, label, COUNT(*) FROM log_events GROUP BY layer, label ORDER BY layer, label")
     ).fetchall()
@@ -718,19 +626,10 @@ def api_fix_labels(db: Session = Depends(get_db)) -> dict:
 
     return {"status": "done", **results}
 
-
 @router.delete("/admin/incidents/clear-simulated")
 def api_clear_simulated_incidents(db: Session = Depends(get_db)) -> dict:
-    """Delete all incidents created by the simulator.
+    from sqlalchemy import text
 
-    Simulated incidents have ``attributes->>'$.simulated' = true`` OR a type
-    that starts with 'Simulated '.  This lets you clean up test data so the
-    real ML-generated incidents become visible again.
-    """
-    from sqlalchemy import text  # noqa: PLC0415
-
-    # MySQL JSON path syntax: JSON_EXTRACT(attributes, '$.simulated') = true
-    # We also catch the older 'Simulated …' type column for safety.
     try:
         result = db.execute(
             text("""
@@ -741,7 +640,6 @@ def api_clear_simulated_incidents(db: Session = Depends(get_db)) -> dict:
         )
         deleted = result.rowcount
     except Exception:
-        # SQLite / older MySQL fallback — attributes stored as plain JSON text
         result = db.execute(
             text("""
                 DELETE FROM incidents
@@ -756,28 +654,19 @@ def api_clear_simulated_incidents(db: Session = Depends(get_db)) -> dict:
     logger.info("clear-simulated-incidents: deleted %d rows", deleted)
     return {"status": "ok", "deleted": deleted}
 
-
 @router.post("/admin/compute-stats")
 def api_compute_stats(db: Session = Depends(get_db)) -> dict:
-    """Pre-compute slow GROUP BY stats on log_events and save to disk.
-
-    This endpoint may run for several minutes on large tables (56 M rows).
-    Call it once after ingest to populate the layer/source breakdown on the
-    dashboard.  Results are stored in ``data/stats_cache.json`` and loaded
-    automatically on the next server startup.
-    """
-    from ..main import _compute_heavy_stats, _save_stats_file  # noqa: PLC0415
-    import main as _main_mod  # noqa — update the in-process cache too  # noqa: PLC0415
-    import time  # noqa: PLC0415
+    from ..main import _compute_heavy_stats, _save_stats_file
+    import main as _main_mod
+    import time
 
     logger.info("compute-stats: starting (may take several minutes)…")
     t0 = time.time()
     try:
         heavy = _compute_heavy_stats(db)
         _save_stats_file(heavy)
-        # Update the in-process cache so the current server instance picks it up
         try:
-            import app.main as _m  # noqa: PLC0415
+            import app.main as _m
             _m._stats_cache = heavy
         except Exception:
             pass
@@ -794,23 +683,12 @@ def api_compute_stats(db: Session = Depends(get_db)) -> dict:
         logger.error("compute-stats failed: %s", exc, exc_info=True)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-
 @router.post("/admin/chat")
 def api_chat(
     body: dict = Body(...),
     db: Session = Depends(get_db),
 ) -> dict:
-    """AI assistant Q&A about the cross-layer detection system.
-
-    Body: {"question": "..."}.
-    Provider is controlled by LLM_PROVIDER in backend/.env:
-      local     — embedded, zero keys (default)
-      gemini    — free Google Gemini Flash (GEMINI_API_KEY)
-      groq      — free Groq cloud (GROQ_API_KEY)
-      ollama    — local LLM via Ollama
-      anthropic — Anthropic Claude (ANTHROPIC_API_KEY)
-    """
-    from ..services.llm_service import chat  # lazy import
+    from ..services.llm_service import chat
 
     question = (body.get("question") or "").strip()
     if not question:
@@ -820,7 +698,7 @@ def api_chat(
 
     try:
         answer = chat(question, db=db)
-        from ..config import get_settings  # noqa: PLC0415
+        from ..config import get_settings
         return {"question": question, "answer": answer, "provider": get_settings().LLM_PROVIDER}
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc

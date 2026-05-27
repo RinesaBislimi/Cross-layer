@@ -1,6 +1,6 @@
 <div class="reports-page">
 
-  <!-- Header -->
+
   <div class="page-header">
     <div>
       <h1>Security Report</h1>
@@ -14,22 +14,22 @@
     </div>
   </div>
 
-  <!-- Loading -->
+
   <div *ngIf="loading" class="state-center">
     <div class="spinner"></div>
     <span class="state-label">Generating report…</span>
   </div>
 
-  <!-- Error -->
+
   <div *ngIf="!loading && error" class="error-banner">
     <span class="error-icon">⚠</span>
     <span>{{ error }}</span>
   </div>
 
-  <!-- Content -->
+
   <ng-container *ngIf="!loading && report">
 
-    <!-- KPI chips -->
+
     <div class="kpi-row">
       <div class="kpi-chip">
         <span class="kpi-val">{{ report.total_incidents | number }}</span>
@@ -50,10 +50,10 @@
       </div>
     </div>
 
-    <!-- Row: Severity + Layer -->
+
     <div class="report-grid">
 
-      <!-- By Severity -->
+
       <div class="card report-section">
         <h2 class="section-title">By Severity</h2>
         <div class="sev-bars">
@@ -72,7 +72,7 @@
         </div>
       </div>
 
-      <!-- By Layer -->
+
       <div class="card report-section">
         <h2 class="section-title">By Layer</h2>
         <table class="report-table">
@@ -105,7 +105,7 @@
 
     </div>
 
-    <!-- Top Entities -->
+
     <div class="card report-section">
       <h2 class="section-title">Top Entities at Risk</h2>
       <div class="entity-rank-list">
@@ -121,7 +121,7 @@
       </div>
     </div>
 
-    <!-- Daily Trend -->
+
     <div *ngIf="report.daily_trend?.length" class="card report-section">
       <h2 class="section-title">Daily Trend</h2>
       <div class="trend-chart">
@@ -147,7 +147,7 @@
       </div>
     </div>
 
-    <!-- Highest-Risk Incidents -->
+
     <div class="card report-section">
       <h2 class="section-title">Highest-Risk Incidents</h2>
       <div class="table-wrap">

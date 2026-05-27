@@ -298,7 +298,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.sub?.unsubscribe();
   }
 
-  // ── Browser-side alert rule evaluation (for browser-notification rules only) ─
+
 
   private _evaluateAlertRules(msg: any): void {
     try {
@@ -313,7 +313,7 @@ export class AppComponent implements OnInit, OnDestroy {
         }
       }
       if (changed) localStorage.setItem('cl_alert_rules', JSON.stringify(rules));
-    } catch { /* ignore parse errors */ }
+    } catch {  }
   }
 
   private _ruleMatches(rule: any, msg: any): boolean {
@@ -352,12 +352,12 @@ export class AppComponent implements OnInit, OnDestroy {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rule: rule.name, condition: rule.condition, event: msg, timestamp: new Date().toISOString() }),
-      }).catch(() => { /* fire and forget */ });
+      }).catch(() => {  });
     }
 
     if (rule.notifyMethod === 'email' && rule.notifyTarget) {
       this.api.sendAlertEmail(rule.notifyTarget, rule.name, rule.condition, false)
-        .subscribe({ error: () => { /* fire and forget */ } });
+        .subscribe({ error: () => {  } });
     }
   }
 }

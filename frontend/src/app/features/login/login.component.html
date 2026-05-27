@@ -1,7 +1,7 @@
 <div class="login-page">
   <div class="login-card">
 
-    <!-- Brand -->
+
     <div class="brand">
       <div class="brand-icon">CL</div>
       <div>
@@ -10,21 +10,21 @@
       </div>
     </div>
 
-    <!-- Tabs -->
+
     <div class="tabs">
       <button class="tab" [class.tab-active]="mode === 'login'" (click)="mode = 'login'; error = ''">Sign in</button>
       <button class="tab" [class.tab-active]="mode === 'register'" (click)="mode = 'register'; error = ''">Create account</button>
     </div>
 
-    <!-- Error banner -->
+
     <div *ngIf="error" class="error-banner">
       <span>⚠ {{ error }}</span>
     </div>
 
-    <!-- Form -->
+
     <form (ngSubmit)="submit()" class="form">
 
-      <!-- Full name (register only) -->
+
       <div class="form-group" *ngIf="mode === 'register'">
         <label class="form-label" for="fullname">Full name</label>
         <input
@@ -38,7 +38,7 @@
         />
       </div>
 
-      <!-- Email -->
+
       <div class="form-group">
         <label class="form-label" for="email">Email address</label>
         <input
@@ -53,7 +53,7 @@
         />
       </div>
 
-      <!-- Password -->
+
       <div class="form-group">
         <label class="form-label" for="password">Password</label>
         <input
@@ -75,7 +75,7 @@
 
     </form>
 
-    <!-- First-user hint -->
+
     <p *ngIf="mode === 'register'" class="hint">
       The first registered account automatically becomes <strong>Admin</strong>.
     </p>

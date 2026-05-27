@@ -7,7 +7,6 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-
 class ConnectionManager:
     def __init__(self) -> None:
         self.active_connections: List[WebSocket] = []
@@ -16,7 +15,6 @@ class ConnectionManager:
     async def connect(self, websocket: WebSocket) -> None:
         await websocket.accept()
         self.active_connections.append(websocket)
-        # Capture the running event loop so background threads can post to it
         self._loop = asyncio.get_event_loop()
 
     def disconnect(self, websocket: WebSocket) -> None:
@@ -34,7 +32,6 @@ class ConnectionManager:
             self.disconnect(c)
 
     def broadcast_sync(self, message: dict) -> None:
-        """Thread-safe broadcast — safe to call from any background thread."""
         if not self.active_connections:
             return
         loop = self._loop
@@ -43,9 +40,7 @@ class ConnectionManager:
             return
         asyncio.run_coroutine_threadsafe(self.broadcast(message), loop)
 
-
 manager = ConnectionManager()
-
 
 @router.websocket("/ws/alerts")
 async def websocket_alerts(websocket: WebSocket) -> None:
@@ -53,7 +48,6 @@ async def websocket_alerts(websocket: WebSocket) -> None:
     try:
         await websocket.send_json({"message": "connected"})
         while True:
-            # Lexon mesazhe nga klienti (opsionale)
             _ = await websocket.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(websocket)

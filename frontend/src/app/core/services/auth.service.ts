@@ -26,7 +26,7 @@ const USER_KEY  = 'cl_user';
 export class AuthService {
   private base = environment.apiUrl;
 
-  // Reactive state
+
   private _user = signal<UserInfo | null>(this._loadUser());
   readonly user        = this._user.asReadonly();
   readonly isLoggedIn  = computed(() => this._user() !== null);
@@ -34,7 +34,7 @@ export class AuthService {
 
   constructor(private http: HttpClient, private router: Router) {}
 
-  // ── Token helpers ───────────────────────────────────────────────────────────
+
 
   getToken(): string | null {
     return localStorage.getItem(TOKEN_KEY);
@@ -55,7 +55,7 @@ export class AuthService {
     this._user.set(res.user);
   }
 
-  // ── API calls ───────────────────────────────────────────────────────────────
+
 
   register(email: string, password: string, fullName = ''): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(`${this.base}/auth/register`, {

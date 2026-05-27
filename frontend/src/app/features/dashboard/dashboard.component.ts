@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ApiService, StatsResponse } from '../../core/services/api.service';
 import { WebSocketService } from '../../core/services/websocket.service';
+import { VoiceNotificationService } from '../../core/services/voice-notification.service';
 import { LogEvent } from '../../shared/models/log-event';
 import { Incident } from '../../shared/models/incident';
 import { Subject, takeUntil, interval, filter, take, debounceTime } from 'rxjs';
@@ -15,7 +16,7 @@ import { Subject, takeUntil, interval, filter, take, debounceTime } from 'rxjs';
   styleUrls: ['./dashboard.component.css'],
 })
 export class DashboardComponent implements OnInit, OnDestroy {
-  healthOk: boolean | null = null;   // null = checking, true = ok, false = offline
+  healthOk: boolean | null = null;
   recentLogs: LogEvent[] = [];
   recentIncidents: Incident[] = [];
   stats: StatsResponse | null = null;
@@ -31,12 +32,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
   constructor(
     private api: ApiService,
     public ws: WebSocketService,
+    public voice: VoiceNotificationService,
   ) {}
 
   ngOnInit(): void {
     this.refresh();
 
-    // Countdown timer + auto-refresh every 30 s
+
     interval(1000).pipe(takeUntil(this.destroy$)).subscribe(() => {
       this.countdown--;
       if (this.countdown <= 0) {
@@ -45,14 +47,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
       }
     });
 
-    // When WS connects for the first time, refresh to pick up live data
+
     this.ws.messages.pipe(
       takeUntil(this.destroy$),
       filter(() => this.stats === null),
       take(1),
     ).subscribe(() => this.refresh());
 
-    // Live message feed — also trigger a debounced refresh on anomaly events
+
     this.ws.messages.pipe(takeUntil(this.destroy$)).subscribe((msg) => {
       this.wsMessages = [msg, ...this.wsMessages].slice(0, 20);
       this.liveAlertCount++;
@@ -62,7 +64,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       }
     });
 
-    // Debounce rapid anomaly bursts — refresh stats/incidents at most once per 3s
+
     this._anomalyRefresh$.pipe(
       debounceTime(3000),
       takeUntil(this.destroy$),
@@ -109,7 +111,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ── Derived metrics ──────────────────────────────────────────────────────────
+
   get criticalCount(): number {
     return this.stats?.incidents_by_severity?.find(s => s.name === 'critical')?.count ?? 0;
   }
@@ -128,7 +130,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   get threatScore(): number {
-    // 0–100: weighted from anomaly log rate (60%) + high/critical incident rate (40%)
+
     const logScore = Math.min(this.anomalyLogRate * 0.6, 60);
     const incScore = Math.min(this.anomalyRate * 0.4, 40);
     return Math.round(logScore + incScore);
@@ -172,7 +174,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   get ringDashOffset(): number {
-    // SVG circle r=32 → circumference = 2πr ≈ 201
+
     return Math.round(201 - (this.threatScore / 100) * 201);
   }
 

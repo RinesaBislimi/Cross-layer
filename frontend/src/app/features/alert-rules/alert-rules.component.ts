@@ -162,7 +162,7 @@ export class AlertRulesComponent implements OnInit {
     this.showForm  = true;
   }
 
-  // ── Test a rule immediately ──────────────────────────────────────────────
+
 
   testRule(rule: AlertRule): void {
     if (rule.notifyMethod === 'browser') {
@@ -225,7 +225,7 @@ export class AlertRulesComponent implements OnInit {
     setTimeout(() => { delete this.testFeedback[id]; }, 5000);
   }
 
-  // ── Label helpers ────────────────────────────────────────────────────────
+
 
   conditionLabel(c: string): string {
     return this.conditions.find(x => x.value === c)?.label ?? c;

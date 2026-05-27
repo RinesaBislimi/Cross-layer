@@ -1,4 +1,3 @@
-"""Evaluate automated response rules and fire actions."""
 
 from __future__ import annotations
 
@@ -19,9 +18,7 @@ logger = logging.getLogger(__name__)
 
 _COOLDOWN_MINUTES = 5
 
-
 def _rule_matches(rule: ResponseRule, incident: Incident) -> bool:
-    """Return True if *incident* satisfies *rule*'s condition + layer filter."""
     attrs  = incident.attributes or {}
     layers = attrs.get("layers", []) if isinstance(attrs, dict) else []
     sev    = (incident.severity or "").lower()
@@ -44,14 +41,12 @@ def _rule_matches(rule: ResponseRule, incident: Incident) -> bool:
     if not matched:
         return False
 
-    # Optional layer filter
     layer_filter = (rule.layer or "").strip().lower()
     if layer_filter and layer_filter != "all":
-        matched = any(layer_filter in str(l).lower() for l in layers) \
+        matched = any(layer_filter in str(l).lower() for l in layers)\
                   or layer_filter == (incident.entity or "").lower()
 
     return matched
-
 
 def _fire_webhook(url: str, payload: dict) -> None:
     try:
@@ -64,12 +59,7 @@ def _fire_webhook(url: str, payload: dict) -> None:
     except Exception as exc:
         logger.warning("Response rule webhook failed: %s", exc)
 
-
 def evaluate_and_respond(db: Session, incidents: List[Incident]) -> int:
-    """Evaluate all enabled response rules against *incidents*.
-
-    Returns the number of rules that fired.
-    """
     if not incidents:
         return 0
 
@@ -86,7 +76,6 @@ def evaluate_and_respond(db: Session, incidents: List[Incident]) -> int:
     fired = 0
 
     for rule in rules:
-        # Cooldown guard
         if rule.last_fired_at:
             if (now - rule.last_fired_at) < timedelta(minutes=_COOLDOWN_MINUTES):
                 continue
@@ -121,7 +110,6 @@ def evaluate_and_respond(db: Session, incidents: List[Incident]) -> int:
                         rule.name, rule.action_target, len(matching))
 
         elif action in ("block_ip", "isolate_host"):
-            # Log the intended action — integrate with your SOAR/firewall API here
             entities = [i.entity for i in matching if i.entity]
             logger.warning(
                 "RESPONSE ACTION: %s — entities=%s (rule=%s, %d incidents)",
@@ -129,12 +117,10 @@ def evaluate_and_respond(db: Session, incidents: List[Incident]) -> int:
             )
 
         elif action == "email_team" and rule.action_target:
-            # Reuse alert_service email logic
             try:
                 from .alert_service import _send_email_sync
-                from ..models.alert_rule import AlertRule  # noqa: F401
+                from ..models.alert_rule import AlertRule
 
-                # Create a transient AlertRule-like object for the email builder
                 class _Proxy:
                     pass
                 proxy = _Proxy()

@@ -63,7 +63,7 @@ export class StatisticsComponent implements OnInit, OnDestroy {
 
     this.api.getIncidents(50).pipe(catchError(() => of([]))).subscribe(list => {
       this.recentIncidents = list;
-      // Build incident charts once data arrives
+
       setTimeout(() => this.buildCharts(), 50);
       done();
     });
@@ -122,7 +122,7 @@ export class StatisticsComponent implements OnInit, OnDestroy {
     const textC = '#64748b';
     const gridC = 'rgba(0,0,0,0.06)';
 
-    // ── Severity doughnut ────────────────────────────────────────────────────
+
     if (this.chartSeverityRef?.nativeElement && this.stats.incidents_by_severity.length) {
       this.chartSev?.destroy();
       this.chartSev = new Chart(this.chartSeverityRef.nativeElement, {
@@ -143,7 +143,7 @@ export class StatisticsComponent implements OnInit, OnDestroy {
       } as ChartConfiguration);
     }
 
-    // ── Detection method horizontal bar ──────────────────────────────────────
+
     if (this.chartModeRef?.nativeElement && this.stats.incidents_by_mode.length) {
       this.chartMode?.destroy();
       this.chartMode = new Chart(this.chartModeRef.nativeElement, {
@@ -168,7 +168,7 @@ export class StatisticsComponent implements OnInit, OnDestroy {
       } as ChartConfiguration);
     }
 
-    // ── Log volume by layer (stacked bar) ────────────────────────────────────
+
     if (this.chartLayerVolumeRef?.nativeElement && this.stats.logs_by_layer?.length) {
       const layers = this.stats.logs_by_layer;
       const normal = layers.map(l => l.count - (l.anomalies ?? 0));
@@ -205,7 +205,7 @@ export class StatisticsComponent implements OnInit, OnDestroy {
       } as ChartConfiguration);
     }
 
-    // ── Log volume by source (horizontal stacked bar) ────────────────────────
+
     if (this.chartSourceVolRef?.nativeElement && this.stats.logs_by_source?.length) {
       const sources = this.stats.logs_by_source;
       const normal  = sources.map(s => s.count - (s.anomalies ?? 0));
@@ -242,7 +242,7 @@ export class StatisticsComponent implements OnInit, OnDestroy {
       } as ChartConfiguration);
     }
 
-    // ── Anomaly rate by layer (horizontal bar) ───────────────────────────────
+
     if (this.chartAnomalyRateRef?.nativeElement && this.stats.logs_by_layer?.length) {
       const layers = this.stats.logs_by_layer.filter(l => l.count > 0);
       const rates  = layers.map(l => l.count > 0 ? +((( l.anomalies ?? 0) / l.count) * 100).toFixed(2) : 0);
@@ -274,7 +274,7 @@ export class StatisticsComponent implements OnInit, OnDestroy {
       } as ChartConfiguration);
     }
 
-    // ── Incident timeline (line chart grouped by day) ────────────────────────
+
     if (this.chartTimelineRef?.nativeElement && this.recentIncidents.length) {
       const buckets = new Map<string, number>();
       for (const inc of this.recentIncidents) {

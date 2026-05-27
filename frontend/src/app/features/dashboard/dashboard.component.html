@@ -1,6 +1,6 @@
 <div class="dashboard">
 
-  <!-- Header -->
+
   <header class="page-header">
     <div>
       <h1>Cross-Layer Log Analysis</h1>
@@ -8,27 +8,37 @@
     </div>
     <div class="header-actions">
       <span class="countdown-pill">↻ {{ countdown }}s</span>
+      <button
+        type="button"
+        class="btn-voice"
+        [class.btn-voice--muted]="voice.isMuted"
+        [title]="voice.isMuted ? 'Voice alerts muted — click to unmute' : 'Voice alerts on — click to mute'"
+        (click)="voice.toggleMute()"
+        *ngIf="voice.isSupported">
+        {{ voice.isMuted ? '🔇' : '🔔' }}
+        <span>{{ voice.isMuted ? 'Muted' : 'Voice On' }}</span>
+      </button>
       <button type="button" class="btn-refresh" (click)="refresh()">Refresh now</button>
     </div>
   </header>
 
-  <!-- Offline banner -->
+
   <div class="alert-banner alert-offline" *ngIf="healthOk === false">
     <span>⚠</span>
     <span>Backend offline — start it with: <code>cd backend &amp;&amp; uvicorn app.main:app --reload</code></span>
   </div>
 
-  <!-- Critical alert banner -->
+
   <div class="alert-banner alert-critical" *ngIf="criticalCount > 0 && healthOk">
     <span class="alert-icon">⚠</span>
     <strong>{{ criticalCount }} critical incident{{ criticalCount > 1 ? 's' : '' }} detected</strong>
     <a routerLink="/incidents" class="alert-link">View all →</a>
   </div>
 
-  <!-- Detection Overview -->
+
   <section class="detection-overview">
 
-    <!-- Layer health matrix -->
+
     <div class="layer-matrix">
       <div class="matrix-header">
         <div>
@@ -50,7 +60,7 @@
         </div>
       </div>
 
-      <!-- Compute stats banner — shown when layer data hasn't been computed yet -->
+
       <div class="compute-banner" *ngIf="!stats?.logs_by_layer?.length && healthOk">
         <span class="compute-icon">📊</span>
         <span class="compute-text">
@@ -95,10 +105,10 @@
       </div>
     </div>
 
-    <!-- Threat panel -->
+
     <div class="threat-panel">
 
-      <!-- Threat score ring -->
+
       <div class="threat-ring-wrap">
         <svg viewBox="0 0 80 80" class="threat-ring-svg">
           <circle cx="40" cy="40" r="32" fill="none" stroke="var(--border)" stroke-width="7"/>
@@ -119,7 +129,7 @@
         <div class="threat-ring-caption">Threat Score</div>
       </div>
 
-      <!-- Severity breakdown -->
+
       <div class="threat-sev">
         <div class="ts-header">
           <span class="ts-title">Incidents by severity</span>
@@ -139,7 +149,7 @@
     </div>
   </section>
 
-  <!-- Main grid: recent logs + recent incidents -->
+
   <div class="grid">
 
     <section class="card section">
@@ -188,7 +198,7 @@
 
   </div>
 
-  <!-- Severity breakdown bars -->
+
   <section class="card section severity-section" *ngIf="stats && stats.incidents_by_severity.length">
     <div class="section-head">
       <h2>Incident severity breakdown</h2>
@@ -206,7 +216,7 @@
     </div>
   </section>
 
-  <!-- Live WS messages -->
+
   <section class="card section ws-section" *ngIf="wsMessages.length">
     <div class="section-head">
       <h2>🔴 Live events</h2>
@@ -215,7 +225,7 @@
     <div class="ws-list">
       <div class="ws-msg" *ngFor="let msg of wsMessages | slice:0:8">
 
-        <!-- type badge -->
+
         <span class="ws-type-badge"
               [class.ws-anomaly]="msg.type === 'log_anomaly'"
               [class.ws-incident]="msg.type === 'incident_batch'"
@@ -223,26 +233,26 @@
           {{ msg.type === 'log_anomaly' ? '⚠ anomaly' : msg.type === 'incident_batch' ? '🚨 incident' : msg.type }}
         </span>
 
-        <!-- layer badge -->
+
         <span class="ws-layer-badge badge badge-{{ msg.layer || 'unknown' }}" *ngIf="msg.layer">
           {{ msg.layer }}
         </span>
 
-        <!-- entity or batch count -->
+
         <span class="ws-entity" *ngIf="msg.entity">{{ msg.entity }}</span>
         <span class="ws-entity" *ngIf="!msg.entity && msg.count">{{ msg.count }} events</span>
 
-        <!-- message / raw text -->
+
         <span class="ws-text" *ngIf="msg.message">
           {{ msg.message | slice:0:90 }}{{ (msg.message?.length ?? 0) > 90 ? '…' : '' }}
         </span>
 
-        <!-- confidence -->
+
         <span class="ws-conf" *ngIf="msg.confidence != null">
           {{ (msg.confidence * 100).toFixed(0) }}% conf
         </span>
 
-        <!-- severity chip -->
+
         <span class="ws-sev" [ngClass]="'ws-sev-' + (msg.severity || '')" *ngIf="msg.severity">
           {{ msg.severity }}
         </span>

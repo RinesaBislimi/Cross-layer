@@ -1,6 +1,6 @@
 <div class="heatmap-page">
 
-  <!-- Header -->
+
   <div class="page-header">
     <div>
       <h1>Anomaly Heatmap</h1>
@@ -8,22 +8,22 @@
     </div>
   </div>
 
-  <!-- Loading -->
+
   <div *ngIf="loading" class="state-center">
     <div class="spinner"></div>
     <span class="state-label">Loading heatmap data…</span>
   </div>
 
-  <!-- Error -->
+
   <div *ngIf="!loading && error" class="error-banner">
     <span class="error-icon">⚠</span>
     <span>{{ error }}</span>
   </div>
 
-  <!-- Content -->
+
   <ng-container *ngIf="!loading && !error">
 
-    <!-- Stats row -->
+
     <div class="stats-row">
       <div class="stat-chip">
         <span class="stat-value">{{ totalAnomalies | number }}</span>
@@ -43,16 +43,16 @@
       </div>
     </div>
 
-    <!-- Hover tooltip bar -->
+
     <div class="hover-bar" [class.hover-bar-visible]="hoveredCell !== null">
       <span class="hover-icon">◎</span>
       <span>{{ hoveredLabel }}</span>
     </div>
 
-    <!-- Grid card -->
+
     <div class="card grid-card">
       <div class="grid-wrap">
-        <!-- Hour labels -->
+
         <div class="hour-labels">
           <div class="day-label-spacer"></div>
           <div
@@ -61,7 +61,7 @@
           >{{ formatHour(h) }}</div>
         </div>
 
-        <!-- Rows: each day -->
+
         <div class="grid-rows">
           <div
             *ngFor="let dow of dowOrder; let di = index"
@@ -80,7 +80,7 @@
         </div>
       </div>
 
-      <!-- Legend -->
+
       <div class="legend">
         <span class="legend-label">Less</span>
         <div class="legend-scale">

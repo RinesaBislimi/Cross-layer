@@ -7,7 +7,6 @@ from sqlalchemy.orm import Session
 
 from ..models import Incident, LogEvent
 
-
 def _generate_incidents_time_cooccurrence(
     db: Session,
     *,
@@ -18,14 +17,6 @@ def _generate_incidents_time_cooccurrence(
     max_events_per_incident: int,
     logger: logging.Logger,
 ) -> Dict[str, Any]:
-    """
-    Create incidents when ``min_layers`` different ``layer`` values appear in the same
-    fixed time bucket ``[t, t + window_minutes)`` anywhere in the log stream — no shared ``entity``.
-
-    Buckets are a non-overlapping grid aligned from ``period_start``. Each incident stores up to
-    ``max_events_per_incident`` event ids (earliest in the bucket first); attributes record if more
-    events existed in the cell.
-    """
     utc_now = datetime.utcnow()
     period_end = utc_now
     period_start = period_end - timedelta(hours=lookback_hours)
@@ -78,7 +69,6 @@ def _generate_incidents_time_cooccurrence(
         or 0
     )
 
-    # If min/max timestamp clamp collapses the range (common for tiny test DBs), still scan one bucket.
     if period_start >= period_end:
         period_start = period_end - window
 
@@ -93,8 +83,6 @@ def _generate_incidents_time_cooccurrence(
             break
         time_cells_scanned += 1
 
-        # Half-open [t, t_end) for interior buckets; include ``period_end`` on the last slice
-        # so rows with timestamp == max(timestamp) are not dropped.
         if t_end < period_end:
             time_upper = LogEvent.timestamp < t_end
         else:
@@ -170,7 +158,6 @@ def _generate_incidents_time_cooccurrence(
             severity = "medium"
         else:
             severity = "low"
-
 
         incident_type = f"Cross-layer time window: {' + '.join(layers)}"
         existing = (
@@ -262,18 +249,12 @@ def _generate_incidents_time_cooccurrence(
         "hint": hint,
     }
 
-
 def correlate_entity_in_window(
     db: Session,
     entity: str,
     start: datetime,
     end: Optional[datetime] = None,
 ) -> Optional[Incident]:
-    """
-    Simple correlation example:
-    - checks if there are signals from network + system + application
-      for the same entity in a time window.
-    """
     if end is None:
         end = start + timedelta(minutes=10)
 
@@ -324,15 +305,9 @@ def correlate_entity_in_window(
     db.refresh(incident)
     return incident
 
-
 def find_common_entities(
     db: Session, min_layers: int = 2, limit: int = 50
 ) -> List[Dict[str, object]]:
-    """
-    Finds entities (e.g., IP / node_id / user) that appear in
-    more than one layer (system/network/application).
-    Used to select good candidates for correlation.
-    """
     rows = (
         db.query(LogEvent.entity, LogEvent.layer)
         .filter(LogEvent.entity.isnot(None), LogEvent.entity != "")
@@ -342,7 +317,7 @@ def find_common_entities(
 
     layers_by_entity: Dict[str, set] = {}
     for entity, layer in rows:
-        if entity:  # Ensure entity is not None
+        if entity:
             layers_by_entity.setdefault(entity, set()).add(layer)
 
     result: List[Dict[str, object]] = []
@@ -352,10 +327,8 @@ def find_common_entities(
                 {"entity": entity, "layers": sorted(layers), "num_layers": len(layers)}
             )
 
-    # Sort by number of layers (desc) and limit result
     result.sort(key=lambda x: x["num_layers"], reverse=True)
     return result[:limit]
-
 
 def generate_cross_layer_incidents(
     db: Session,
@@ -368,31 +341,6 @@ def generate_cross_layer_incidents(
     correlation_mode: str = "entity",
     max_events_per_incident: int = 2000,
 ) -> Dict[str, Any]:
-    """
-    Generates cross-layer incidents from log_events.
-
-    ``correlation_mode``:
-    - **entity** (default): same ``entity`` string must appear in multiple ``layer`` values
-      within a sliding time window.
-    - **time_cooccurrence**: each fixed grid bucket ``[t, t + window_minutes)`` that contains
-      enough distinct layers becomes one incident (``entity`` is null). Use this when layer-specific
-      identifiers never match across sources.
-
-    Strategy (entity mode):
-    - Get distinct entities in the lookback period.
-    - For each entity, scan ordered events with either:
-      - **sliding_window=True** (default): every event starts a window
-        ``[t, t + window_minutes)``. This catches layers that land minutes apart
-        (disjoint chunking often misses them when ``window_minutes`` is small).
-      - **sliding_window=False**: legacy non-overlapping chunks from the first event.
-
-    Time window: by default uses the last ``lookback_hours`` ending at **UTC now**. If that
-    yields no entities (typical for historical CSV data whose timestamps are in the past),
-    the window is re-anchored. If logs exist but lack entities near "now", we anchor to the
-    latest timestamp that has entity values.
-
-    Returns counts plus diagnostics (logs in window, time anchor used, optional hint).
-    """
     logger = logging.getLogger(__name__)
 
     if window_minutes <= 0:
@@ -430,11 +378,6 @@ def generate_cross_layer_incidents(
         min_distinct_layers: int,
         limit: int,
     ) -> List[str]:
-        """
-        Entities that appear in at least ``min_distinct_layers`` different ``layer``
-        values within [p_start, p_end]. Ordered by total event count (desc) so the
-        ``limit`` cap keeps the busiest cross-layer keys, not an arbitrary SQL order.
-        """
         rows = (
             db.query(LogEvent.entity)
             .filter(
@@ -700,8 +643,6 @@ def generate_cross_layer_incidents(
         time_anchor,
     )
 
-    # If the chosen lookback has no multi-layer entities, scan a wider interval ending at the same
-    # `period_end` so we can tell "slice too short" vs "IDs never overlap across layers".
     probe_window_hours = 0
     multi_layer_entities_in_probe_window = 0
     if multi_layer_entity_total == 0 and logs_with_entity_total > 0:

@@ -6,7 +6,7 @@
   gap: 1.25rem;
 }
 
-/* ── Buttons ─────────────────────────────────────────────── */
+
 .btn-primary {
   padding: 0.45rem 1rem;
   background: var(--accent);
@@ -36,7 +36,7 @@
 }
 .btn-secondary:hover { border-color: #9ca3af; background: var(--bg-hover); }
 
-/* ── Notice banner ───────────────────────────────────────── */
+
 .notice-banner {
   display: flex;
   align-items: center;
@@ -50,7 +50,7 @@
 }
 .notice-icon { font-size: 0.9rem; flex-shrink: 0; }
 
-/* ── Form card ───────────────────────────────────────────── */
+
 .form-card {
   display: flex;
   flex-direction: column;
@@ -120,14 +120,14 @@
   border-top: 1px solid var(--border);
 }
 
-/* ── Rules list ──────────────────────────────────────────── */
+
 .rules-list {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
 }
 
-/* ── Rule card ───────────────────────────────────────────── */
+
 .rule-card {
   display: flex;
   flex-direction: column;
@@ -162,7 +162,7 @@
   white-space: nowrap;
 }
 
-/* Toggle switch */
+
 .toggle-wrap {
   display: inline-flex;
   align-items: center;
@@ -199,7 +199,7 @@
 .toggle-input:checked + .toggle-slider { background: var(--accent); }
 .toggle-input:checked + .toggle-slider::after { transform: translateX(16px); }
 
-/* Delete button */
+
 .btn-delete {
   background: transparent;
   border: 1px solid transparent;
@@ -217,7 +217,7 @@
   color: var(--danger);
 }
 
-/* Condition + layer meta */
+
 .rule-meta {
   display: flex;
   align-items: center;
@@ -247,7 +247,7 @@
   padding: 0.18rem 0.55rem;
 }
 
-/* Bottom row */
+
 .rule-bottom {
   display: flex;
   align-items: center;
@@ -301,7 +301,7 @@
   font-weight: 400;
 }
 
-/* ── Test row ────────────────────────────────────────────── */
+
 .rule-test-row {
   display: flex;
   align-items: center;
@@ -349,7 +349,7 @@
 .feedback-err  { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
 .feedback-info { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
 
-/* ── Empty state ─────────────────────────────────────────── */
+
 .empty-state {
   text-align: center;
   padding: 3.5rem 1rem;

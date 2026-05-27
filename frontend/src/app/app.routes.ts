@@ -4,13 +4,13 @@ import { authGuard } from './core/guards/auth.guard';
 export const routes: Routes = [
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
 
-  // ── Public route ──────────────────────────────────────────────────────────
+
   {
     path: 'login',
     loadComponent: () => import('./features/login/login.component').then(m => m.LoginComponent),
   },
 
-  // ── Protected routes ──────────────────────────────────────────────────────
+
   { path: 'dashboard',     canActivate: [authGuard], loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent) },
   { path: 'logs',          canActivate: [authGuard], loadComponent: () => import('./features/logs/logs.component').then(m => m.LogsComponent) },
   { path: 'incidents',     canActivate: [authGuard], loadComponent: () => import('./features/incidents/incidents.component').then(m => m.IncidentsComponent) },

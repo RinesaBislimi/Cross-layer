@@ -6,7 +6,7 @@
   gap: 1.25rem;
 }
 
-/* ── Header ──────────────────────────────────────────────── */
+
 .header-meta { display: flex; align-items: center; gap: 0.75rem; }
 .meta-count {
   font-size: 0.8rem;
@@ -17,14 +17,14 @@
   padding: 0.2rem 0.75rem;
 }
 
-/* ── Two-column layout ───────────────────────────────────── */
+
 .content-layout {
   display: flex;
   gap: 1.25rem;
   align-items: flex-start;
 }
 
-/* ── Entity list ─────────────────────────────────────────── */
+
 .entity-list {
   display: flex;
   flex-direction: column;
@@ -62,7 +62,7 @@
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.08) !important;
 }
 
-/* Name + risk pill */
+
 .entity-head {
   display: flex;
   align-items: center;
@@ -96,7 +96,7 @@
 .risk-medium   { background: #fefce8; color: #854d0e; border-color: #fde68a; }
 .risk-low      { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
 
-/* Risk bar */
+
 .risk-bar-track {
   height: 5px;
   background: var(--bg-hover);
@@ -123,7 +123,7 @@
   color: var(--text-muted);
 }
 
-/* Meta row */
+
 .entity-meta {
   display: flex;
   align-items: center;
@@ -142,14 +142,14 @@
   color: var(--text-muted);
 }
 
-/* Badge rows */
+
 .badge-row {
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem;
 }
 
-/* ── Detail panel ────────────────────────────────────────── */
+
 .detail-panel {
   flex: 1;
   position: sticky;
@@ -198,7 +198,7 @@
 }
 .btn-close:hover { background: #fee2e2; border-color: #fca5a5; color: var(--danger); }
 
-/* Incidents table */
+
 .detail-table-wrap {
   overflow-x: auto;
 }
@@ -258,7 +258,7 @@
   border: 1px solid transparent;
 }
 
-/* ── States ──────────────────────────────────────────────── */
+
 .state-center {
   display: flex;
   flex-direction: column;

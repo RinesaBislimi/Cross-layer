@@ -21,20 +21,13 @@ from .ml_models import (
 
 settings = get_settings()
 
-
 def _resolve_model_path(rel: str) -> str:
-    """Always resolve model paths relative to the backend root directory.
-
-    This ensures save_model() and api_model_status() agree on the location
-    regardless of which directory uvicorn is launched from.
-    """
     p = Path(rel)
     if p.is_absolute():
         return str(p)
     resolved = (_backend_root() / p).resolve()
     resolved.parent.mkdir(parents=True, exist_ok=True)
     return str(resolved)
-
 
 def _ensure_labels(df, dataset_name: str) -> None:
     if df is None or df.empty:
@@ -46,7 +39,6 @@ def _ensure_labels(df, dataset_name: str) -> None:
             f"No 'label' column found for {dataset_name}. "
             f"Make sure the dataset has labels and ingestion maps them to LogEvent.label."
         )
-
 
 def _train_layer(
     db: Session,
@@ -73,7 +65,6 @@ def _train_layer(
         "model_type":    model_type,
     }
 
-
 def train_bgl(db: Session, model_type: str = "rf") -> dict:
     return _train_layer(
         db,
@@ -84,11 +75,9 @@ def train_bgl(db: Session, model_type: str = "rf") -> dict:
         model_type=model_type,
     )
 
-
 def train_cicids(db: Session, model_type: str = "rf") -> dict:
     df = build_cicids_features(db)
     _ensure_labels(df, "CICIDS2017")
-    # Use proper numerical features when available; fall back to text_len
     feature_cols = [c for c in CICIDS_FEATURE_COLS if c in df.columns and df[c].sum() != 0]
     if not feature_cols:
         feature_cols = ["text_len"] if "text_len" in df.columns else CICIDS_FEATURE_COLS
@@ -107,7 +96,6 @@ def train_cicids(db: Session, model_type: str = "rf") -> dict:
         "model_type":    model_type,
     }
 
-
 def train_tda(db: Session, model_type: str = "rf") -> dict:
     return _train_layer(
         db,
@@ -118,27 +106,17 @@ def train_tda(db: Session, model_type: str = "rf") -> dict:
         model_type=model_type,
     )
 
-
 def train_cross_layer(
     db: Session,
     window_minutes: int = 10,
     min_layers: int = 2,
     model_type: str = "rf",
 ) -> dict:
-    """
-    Train the cross-layer model on (entity × time-window) features.
-
-    Falls back to time co-occurrence windows (no entity requirement) when
-    entity-based overlap across layers is too sparse to produce a training set.
-    This is common because BGL uses node names, CICIDS uses IPs, and TDA uses
-    user IDs — they rarely share the same entity string.
-    """
     mode = "entity"
     df = build_cross_layer_features(db, window_minutes=window_minutes, min_layers=min_layers)
 
     feature_cols = [c for c in (df.columns if df is not None else []) if c.startswith("count_")]
     if df is None or df.empty or len(df) < 10 or not feature_cols:
-        # Fallback: sequential bucket approach — always produces training data
         mode = "time_cooccurrence"
         df = build_cross_layer_time_features(db, window_minutes=window_minutes)
         feature_cols = [
@@ -165,7 +143,6 @@ def train_cross_layer(
     model_path = _resolve_model_path(settings.CROSS_LAYER_MODEL_PATH)
     save_model(model, model_path)
 
-    # Verify the file was actually written
     saved_ok = Path(model_path).is_file()
     if not saved_ok:
         raise RuntimeError(

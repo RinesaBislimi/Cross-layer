@@ -19,7 +19,7 @@ export class HeatmapComponent implements OnInit {
 
   hours = Array.from({ length: 24 }, (_, i) => i);
   days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  // dow mapping: Mon=2,Tue=3,Wed=4,Thu=5,Fri=6,Sat=7,Sun=1
+
   dowOrder = [2, 3, 4, 5, 6, 7, 1];
 
   maxAnomalies = 0;
@@ -53,12 +53,12 @@ export class HeatmapComponent implements OnInit {
     this.maxAnomalies = Math.max(...this.cells.map((c) => c.anomalies), 1);
     this.totalAnomalies = this.cells.reduce((s, c) => s + c.anomalies, 0);
 
-    // peak hour
+
     const hourTotals = Array(24).fill(0);
     this.cells.forEach((c) => (hourTotals[c.hour] += c.anomalies));
     this.peakHour = hourTotals.indexOf(Math.max(...hourTotals));
 
-    // peak day
+
     const dayTotals: Record<number, number> = {};
     this.dowOrder.forEach((d) => (dayTotals[d] = 0));
     this.cells.forEach((c) => (dayTotals[c.dow] = (dayTotals[c.dow] || 0) + c.anomalies));

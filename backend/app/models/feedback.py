@@ -1,11 +1,9 @@
-"""Analyst feedback on incidents — used to refine ML models."""
 
 from datetime import datetime
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
 
 from ..db import Base
-
 
 class IncidentFeedback(Base):
     __tablename__ = "incident_feedback"
@@ -16,6 +14,5 @@ class IncidentFeedback(Base):
     analyst_id  = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"),
                          nullable=True)
     verdict     = Column(String(30), nullable=False)
-    # verdict: true_positive | false_positive | needs_review
     notes       = Column(Text, nullable=True, default="")
     created_at  = Column(DateTime, nullable=False, default=datetime.utcnow)

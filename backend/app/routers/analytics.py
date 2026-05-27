@@ -1,13 +1,3 @@
-"""Analytics endpoints: heatmap, entity risk, attack chains, report summary, email alerts.
-
-Schema notes (incidents table):
-  - `type`       — incident type string  (NOT `incident_type`)
-  - `severity`   — 'critical' | 'high' | 'medium' | 'low'
-  - `attributes` — JSON blob with 'description', 'layers' (list), 'severity_score',
-                   'anomaly_count', 'duration_minutes', 'generated_from', …
-  - NO `risk_score` column — derived from severity in Python
-  - NO top-level `layer` column — extracted from attributes->>'$.layers'
-"""
 
 import json
 import logging
@@ -29,17 +19,12 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
-# Map severity string → 0-1 risk score
 _SEV_SCORE = {"critical": 0.90, "high": 0.75, "medium": 0.50, "low": 0.25}
 
-
 def _sev_score(sev):
-    # type: (Optional[str]) -> float
     return _SEV_SCORE.get((sev or "").lower(), 0.25)
 
-
 def _parse_layers(raw):
-    # type: (Optional[str]) -> list
     if not raw:
         return []
     try:
@@ -48,13 +33,8 @@ def _parse_layers(raw):
     except Exception:
         return []
 
-
-# ── Heatmap ───────────────────────────────────────────────────────────────────
-
 @router.get("/heatmap")
 def get_heatmap(db: Session = Depends(get_db)):
-    """Anomaly counts by hour-of-day x day-of-week.
-    Samples last 100 K rows via PK descending scan — safe on 56 M rows."""
     try:
         rows = db.execute(text("""
             SELECT
@@ -88,12 +68,8 @@ def get_heatmap(db: Session = Depends(get_db)):
         logger.error("heatmap failed: %s", exc)
         return {"data": [], "error": str(exc)}
 
-
-# ── Entity risk profiler ──────────────────────────────────────────────────────
-
 @router.get("/entities")
 def get_entities(limit: int = 60, db: Session = Depends(get_db)):
-    """Top entities ranked by risk (severity-derived). Incidents table only — fast."""
     try:
         rows = db.execute(text("""
             SELECT
@@ -141,10 +117,8 @@ def get_entities(limit: int = 60, db: Session = Depends(get_db)):
         logger.error("entities failed: %s", exc)
         return {"entities": [], "error": str(exc)}
 
-
 @router.get("/entity/{entity_name:path}")
 def get_entity_detail(entity_name: str, db: Session = Depends(get_db)):
-    """All incidents for a specific entity."""
     try:
         rows = db.execute(text("""
             SELECT
@@ -179,16 +153,8 @@ def get_entity_detail(entity_name: str, db: Session = Depends(get_db)):
         logger.error("entity detail failed: %s", exc)
         return {"entity": entity_name, "incidents": [], "error": str(exc)}
 
-
-# ── Attack chains ─────────────────────────────────────────────────────────────
-
 @router.get("/attack-chains")
 def get_attack_chains(db: Session = Depends(get_db)):
-    """Return each incident as an attack chain, with one timeline event per layer.
-
-    Each incident already encodes which layers were involved (attributes.layers).
-    Cross-layer incidents (2+ layers) are flagged and sorted to the top.
-    """
     try:
         rows = db.execute(text("""
             SELECT
@@ -220,7 +186,6 @@ def get_attack_chains(db: Session = Depends(get_db)):
             layers = _parse_layers(r[4])
             risk    = _sev_score(r[2])
 
-            # Build one virtual "event" per layer for the timeline view
             events = [
                 {
                     "id":            "%s-%s" % (r[0], lyr),
@@ -254,12 +219,8 @@ def get_attack_chains(db: Session = Depends(get_db)):
         logger.error("attack-chains failed: %s", exc)
         return {"chains": [], "total": 0, "error": str(exc)}
 
-
-# ── Report summary ────────────────────────────────────────────────────────────
-
 @router.get("/report-summary")
 def get_report_summary(db: Session = Depends(get_db)):
-    """All data needed for the report generator. Incidents table only — fast."""
     try:
         inc_total = int(db.execute(text("SELECT COUNT(*) FROM incidents")).scalar() or 0)
 
@@ -347,19 +308,14 @@ def get_report_summary(db: Session = Depends(get_db)):
         logger.error("report-summary failed: %s", exc)
         return {"error": str(exc), "generated_at": datetime.utcnow().isoformat()}
 
-
-# ── Alert email sender ────────────────────────────────────────────────────────
-
 class SendEmailRequest(BaseModel):
-    to: str           # recipient email
+    to: str
     rule_name: str
     condition: str
     is_test: bool = True
 
-
 @router.post("/send-alert-email")
 def send_alert_email(req: SendEmailRequest):
-    """Send a test/real alert email via SMTP. Requires SMTP_USER / SMTP_PASS in .env."""
     cfg       = get_settings()
     smtp_user = cfg.SMTP_USER
     smtp_pass = cfg.SMTP_PASS

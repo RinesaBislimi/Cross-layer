@@ -21,7 +21,7 @@ export class LoginComponent {
   loading  = false;
 
   constructor(private auth: AuthService, private router: Router) {
-    // If already logged in, redirect to dashboard
+
     if (this.auth.isLoggedIn()) {
       this.router.navigate(['/dashboard']);
     }

@@ -1,31 +1,31 @@
-/* ─── Google Fonts ─────────────────────────────────────────────── */
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
-/* ─── Design tokens ────────────────────────────────────────────── */
+
 :root {
-  /* ── Backgrounds — white-dominant ── */
-  --bg:           #f5f6fa;   /* page canvas: barely-there cool tint     */
-  --bg-card:      #ffffff;   /* card surface: pure white                */
-  --bg-hover:     #f8f9fc;   /* hover / subtle insets                   */
-  --bg-subtle:    #fafbff;   /* section insets, code blocks             */
 
-  /* ── Borders — featherlight ── */
-  --border:       #e8eaf0;   /* standard border                         */
-  --border-light: #f2f3f8;   /* ultra-light dividers                    */
+  --bg:           #f5f6fa;
+  --bg-card:      #ffffff;
+  --bg-hover:     #f8f9fc;
+  --bg-subtle:    #fafbff;
 
-  /* ── Typography ── */
-  --text:         #0d1117;   /* primary: near-black                     */
-  --text-muted:   #6b7280;   /* secondary: cool gray                    */
-  --text-subtle:  #9ca3af;   /* tertiary: very light labels             */
 
-  /* ── Accent — refined indigo ── */
+  --border:       #e8eaf0;
+  --border-light: #f2f3f8;
+
+
+  --text:         #0d1117;
+  --text-muted:   #6b7280;
+  --text-subtle:  #9ca3af;
+
+
   --accent:       #4f46e5;
   --accent-hover: #4338ca;
   --accent-light: #eef2ff;
   --accent-dim:   #818cf8;
   --accent-text:  #3730a3;
 
-  /* ── Semantic ── */
+
   --success:      #059669;
   --success-bg:   #ecfdf5;
   --warning:      #d97706;
@@ -33,25 +33,25 @@
   --danger:       #dc2626;
   --danger-bg:    #fef2f2;
 
-  /* ── Elevation — barely-there shadows ── */
+
   --shadow-xs: 0 1px 2px rgba(13,17,23,.05);
   --shadow-sm: 0 1px 4px rgba(13,17,23,.06), 0 1px 2px rgba(13,17,23,.04);
   --shadow:    0 4px 12px -2px rgba(13,17,23,.07), 0 2px 4px rgba(13,17,23,.04);
   --shadow-md: 0 8px 24px -4px rgba(13,17,23,.08), 0 4px 8px rgba(13,17,23,.04);
   --shadow-lg: 0 20px 48px -8px rgba(13,17,23,.10), 0 8px 16px rgba(13,17,23,.04);
 
-  /* ── Radius ── */
+
   --radius-sm:  8px;
   --radius:     12px;
   --radius-lg:  16px;
   --radius-xl:  20px;
 
-  /* ── Fonts ── */
+
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 }
 
-/* ─── Reset & base ─────────────────────────────────────────────── */
+
 *, *::before, *::after { box-sizing: border-box; }
 
 html { scroll-behavior: smooth; }
@@ -87,7 +87,7 @@ code, .mono {
   font-size: 0.875em;
 }
 
-/* ─── Card component ───────────────────────────────────────────── */
+
 .card {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -98,7 +98,7 @@ code, .mono {
 }
 .card:hover { box-shadow: var(--shadow); }
 
-/* ─── Badge / chip ─────────────────────────────────────────────── */
+
 .badge {
   display: inline-block;
   padding: 0.2em 0.6em;
@@ -109,37 +109,37 @@ code, .mono {
   border: 1px solid transparent;
 }
 
-/* Layer badges */
+
 .badge-system      { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
 .badge-network     { background: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
 .badge-application { background: #f5f3ff; color: #5b21b6; border-color: #ddd6fe; }
 .badge-security    { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
 
-/* Severity badges */
+
 .badge-critical { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
 .badge-high     { background: #fff7ed; color: #9a3412; border-color: #fed7aa; }
 .badge-medium   { background: #fefce8; color: #854d0e; border-color: #fde68a; }
 .badge-low      { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
 
-/* ─── Button base ──────────────────────────────────────────────── */
+
 button {
   font-family: var(--font-sans);
 }
 
-/* ─── Scrollbar ────────────────────────────────────────────────── */
+
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 999px; }
 ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
 
-/* ─── Selection ────────────────────────────────────────────────── */
+
 ::selection { background: #e0e7ff; color: var(--accent-text); }
 
-/* ─── Utility ──────────────────────────────────────────────────── */
+
 .error  { color: var(--danger); }
 .muted  { color: var(--text-muted); }
 
-/* ─── Page header shared style ─────────────────────────────────── */
+
 .page-header {
   display: flex;
   align-items: flex-start;

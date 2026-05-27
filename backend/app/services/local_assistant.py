@@ -1,26 +1,12 @@
-"""Advanced embedded AI assistant — weighted scoring, multi-intent, entity extraction.
-
-No external API required. Uses:
-  • Weighted keyword scoring  — each keyword carries a 1-5 weight; intents are ranked
-  • Multi-intent combination  — top-scoring intents are combined into one rich answer
-  • Named entity extraction   — datasets, layers, metrics, algorithms detected in question
-  • Framing detection         — "high FPR", "low recall" → specific actionable advice
-  • Comparison routing        — "precision vs recall", "XGBoost vs LightGBM" → table
-  • Live DB injection         — DB stats fetched once and passed to all builders
-"""
 from __future__ import annotations
 
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
-# ── Constants ─────────────────────────────────────────────────────────────────
-COMBINE_THRESHOLD = 4   # minimum score for an intent to qualify for combination
-TOP_THRESHOLD     = 7   # score above this = "confident single match"
-MAX_COMBINED      = 3   # max intents combined in one response
+COMBINE_THRESHOLD = 4
+TOP_THRESHOLD     = 7
+MAX_COMBINED      = 3
 
-
-# ── Intent registry ───────────────────────────────────────────────────────────
-# Each entry: { "keywords": {kw: weight}, "threshold": int, "db_needed": bool }
 INTENTS: Dict[str, Dict] = {
     "metrics": {
         "keywords": {
@@ -110,7 +96,6 @@ INTENTS: Dict[str, Dict] = {
         },
         "threshold": 4, "db_needed": True,
     },
-    # ── Framing intents (high priority, override normal routing) ──────────────
     "framing_high_fpr": {
         "keywords": {
             "high false positive": 6, "high fpr": 6, "too many alert": 6,
@@ -141,7 +126,6 @@ INTENTS: Dict[str, Dict] = {
         },
         "threshold": 5, "db_needed": False, "framing": True,
     },
-    # ── Comparison intent ─────────────────────────────────────────────────────
     "compare": {
         "keywords": {
             "difference between": 6, "compare": 5, "versus": 5, "vs ": 5,
@@ -153,8 +137,6 @@ INTENTS: Dict[str, Dict] = {
     },
 }
 
-
-# ── Comparison knowledge base ─────────────────────────────────────────────────
 ALGO_COMPARE: Dict[str, Dict[str, str]] = {
     "rf": {
         "name": "Random Forest",
@@ -222,19 +204,13 @@ METRIC_COMPARE: Dict[str, str] = {
     ),
 }
 
-
-# ── Scoring ───────────────────────────────────────────────────────────────────
-
 def _word_match(text: str, keyword: str) -> bool:
-    """Match keyword in text. Requires word boundaries for short tokens (≤3 chars)."""
     if len(keyword) <= 3:
         pattern = r'(?<![a-zA-Z])' + re.escape(keyword) + r'(?![a-zA-Z])'
         return bool(re.search(pattern, text))
     return keyword in text
 
-
 def _score(q: str) -> Dict[str, int]:
-    """Single-pass weighted scorer. Returns {intent_name: score} for all intents above threshold."""
     scores: Dict[str, int] = {}
     for intent_name, intent_def in INTENTS.items():
         total = 0
@@ -245,11 +221,7 @@ def _score(q: str) -> Dict[str, int]:
             scores[intent_name] = total
     return scores
 
-
-# ── Entity extraction ─────────────────────────────────────────────────────────
-
 def _extract_entities(q: str) -> Dict[str, Any]:
-    """Detect named entities in the question: datasets, layers, metrics, algorithms."""
     datasets, layers, metrics, algorithms = [], [], [], []
 
     for name in ("bgl", "cicids", "tda"):
@@ -299,11 +271,7 @@ def _extract_entities(q: str) -> Dict[str, Any]:
         "question_type": question_type,
     }
 
-
-# ── Database helpers ──────────────────────────────────────────────────────────
-
 def _db_stats(db) -> Dict[str, Any]:
-    """Fetch live counts using fast queries — no GROUP BY on large log_events table."""
     from sqlalchemy import text
 
     row = db.execute(text("""
@@ -316,13 +284,11 @@ def _db_stats(db) -> Dict[str, Any]:
     anomaly_logs = int(row[1] or 0)
     total_inc    = int(row[2] or 0)
 
-    # Severity breakdown — incidents table is small, GROUP BY is fast
     sev_rows = db.execute(text(
         "SELECT severity, COUNT(1) FROM incidents GROUP BY severity ORDER BY COUNT(1) DESC"
     )).fetchall()
     by_sev = {str(r[0] or "unknown"): r[1] for r in sev_rows}
 
-    # Use fixed known sources/layers instead of slow GROUP BY on log_events
     by_source: Dict[str, int] = {"BGL": 0, "CICIDS": 0, "TDA": 0}
     by_layer:  Dict[str, int] = {"system": 0, "network": 0, "application": 0}
 
@@ -337,14 +303,10 @@ def _db_stats(db) -> Dict[str, Any]:
         "by_severity":     by_sev,
     }
 
-
-# ── Answer builders ───────────────────────────────────────────────────────────
-
 def _answer_metrics(entities: Dict, stats: Optional[Dict]) -> str:
     asked = entities.get("metrics", [])
     lines = ["**ML Metric Reference**\n"]
 
-    # If specific metrics mentioned, show those first with full detail
     covered = set()
     for m in asked:
         key = m.replace(" rate", "").replace(" score", "").strip()
@@ -352,7 +314,6 @@ def _answer_metrics(entities: Dict, stats: Optional[Dict]) -> str:
             lines.append(METRIC_COMPARE[key])
             covered.add(key)
 
-    # Always show the full table
     lines.append("\n**Quick reference:**")
     lines.append("| Metric | Formula | Focus |")
     lines.append("|--------|---------|-------|")
@@ -364,7 +325,6 @@ def _answer_metrics(entities: Dict, stats: Optional[Dict]) -> str:
     lines.append("\n**For security:** prioritise **Recall** (catch all threats) and **F1** (balance). "
                  "Keep **FPR** low to avoid overwhelming analysts.")
     return "\n".join(lines)
-
 
 def _answer_anomaly(entities: Dict, stats: Optional[Dict]) -> str:
     ds = entities.get("datasets", [])
@@ -409,7 +369,6 @@ def _answer_anomaly(entities: Dict, stats: Optional[Dict]) -> str:
         )
     return "\n".join(lines)
 
-
 def _answer_incident(entities: Dict, stats: Optional[Dict]) -> str:
     lines = ["**Incident Management**\n"]
     if stats:
@@ -434,7 +393,6 @@ def _answer_incident(entities: Dict, stats: Optional[Dict]) -> str:
         "• **ML-scored** — uses trained model probabilities (more precise)"
     )
     return "\n".join(lines)
-
 
 def _answer_model(entities: Dict, stats: Optional[Dict]) -> str:
     asked_algos = entities.get("algorithms", [])
@@ -467,7 +425,6 @@ def _answer_model(entities: Dict, stats: Optional[Dict]) -> str:
     )
     return "\n".join(lines)
 
-
 def _answer_reduce_fp(entities: Dict, stats: Optional[Dict]) -> str:
     return (
         "**How to Reduce False Positives**\n\n"
@@ -489,7 +446,6 @@ def _answer_reduce_fp(entities: Dict, stats: Optional[Dict]) -> str:
         "**Trade-off reminder:** Reducing FPR usually reduces Recall too (you catch fewer real attacks).\n"
         "Monitor both metrics together with the F1 score."
     )
-
 
 def _answer_pipeline(entities: Dict, stats: Optional[Dict]) -> str:
     lines = ["**ML Analysis Pipeline — Step by Step**\n"]
@@ -524,7 +480,6 @@ def _answer_pipeline(entities: Dict, stats: Optional[Dict]) -> str:
         lines.append("*Pipeline is empty — start with Step 1 to ingest data.*")
     return "\n".join(lines)
 
-
 def _answer_layers(entities: Dict, stats: Optional[Dict]) -> str:
     asked = entities.get("layers", []) or entities.get("datasets", [])
     lines = ["**The Three Monitoring Layers**\n"]
@@ -550,7 +505,6 @@ def _answer_layers(entities: Dict, stats: Optional[Dict]) -> str:
         ),
     }
 
-    # If specific layer asked, show detail for that one first
     if asked:
         for lyr in asked:
             if lyr in layer_info:
@@ -577,7 +531,6 @@ def _answer_layers(entities: Dict, stats: Optional[Dict]) -> str:
     )
     return "\n".join(lines)
 
-
 def _answer_cross_layer(entities: Dict, stats: Optional[Dict]) -> str:
     return (
         "**Cross-Layer Detection — How It Works**\n\n"
@@ -600,7 +553,6 @@ def _answer_cross_layer(entities: Dict, stats: Optional[Dict]) -> str:
         "  Trains on combined feature vectors: count_*, burst_*, active_layers.\n"
         "  Learns which multi-layer co-occurrence patterns are truly malicious."
     )
-
 
 def _answer_dataset(entities: Dict, stats: Optional[Dict]) -> str:
     from ..config import get_settings
@@ -629,7 +581,6 @@ def _answer_dataset(entities: Dict, stats: Optional[Dict]) -> str:
         lines.append("*No data ingested yet. Go to Analysis → Step 1.*")
     return "\n".join(lines)
 
-
 def _answer_stats(entities: Dict, stats: Optional[Dict]) -> str:
     if not stats:
         return (
@@ -653,9 +604,6 @@ def _answer_stats(entities: Dict, stats: Optional[Dict]) -> str:
         f"**Incidents:** {stats['total_incidents']:,} total\n"
         f"  • By severity: {sev_str}"
     )
-
-
-# ── Framing builders ──────────────────────────────────────────────────────────
 
 def _answer_framing(framing_intent: str, entities: Dict, stats: Optional[Dict]) -> str:
     if framing_intent == "framing_high_fpr":
@@ -731,14 +679,10 @@ def _answer_framing(framing_intent: str, entities: Dict, stats: Optional[Dict]) 
         )
     return _answer_metrics(entities, stats)
 
-
-# ── Comparison builder ────────────────────────────────────────────────────────
-
 def _answer_comparison(entities: Dict, scores: Dict[str, int]) -> str:
     algos   = entities.get("algorithms", [])
     metrics = entities.get("metrics", [])
 
-    # Algorithm comparison
     if len(algos) >= 2:
         a, b = algos[0], algos[1]
         da, db_ = ALGO_COMPARE.get(a, {}), ALGO_COMPARE.get(b, {})
@@ -759,7 +703,6 @@ def _answer_comparison(entities: Dict, scores: Dict[str, int]) -> str:
                    f"Both are strong — try both and compare F1 on your validation set.")
             )
 
-    # Metric comparison
     if len(metrics) >= 2:
         m_a, m_b = metrics[0], metrics[1]
         ka = m_a.replace(" rate", "").replace(" score", "").strip()
@@ -773,7 +716,6 @@ def _answer_comparison(entities: Dict, scores: Dict[str, int]) -> str:
             "F1 is the best single metric when both matter equally."
         )
 
-    # Generic comparison (no specific pair found)
     return (
         "**Algorithm Comparison — All Models**\n\n"
         "| Algorithm | Speed | Accuracy | FPR | Best for |\n"
@@ -785,9 +727,6 @@ def _answer_comparison(entities: Dict, scores: Dict[str, int]) -> str:
         + "\n\n**Metric comparison:**\n\n"
         + "\n\n".join(METRIC_COMPARE.values())
     )
-
-
-# ── Dispatcher ────────────────────────────────────────────────────────────────
 
 def _dispatch(intent: str, entities: Dict, stats: Optional[Dict], scores: Dict) -> str:
     dispatch_map = {
@@ -807,7 +746,6 @@ def _dispatch(intent: str, entities: Dict, stats: Optional[Dict], scores: Dict) 
         return _answer_framing(intent, entities, stats)
     fn = dispatch_map.get(intent)
     return fn() if fn else ""
-
 
 def _generic_fallback(question: str, scored: List[Tuple[str, int]]) -> str:
     hints = "\n".join(
@@ -830,20 +768,13 @@ def _generic_fallback(question: str, scored: List[Tuple[str, int]]) -> str:
         "• \"How does cross-layer correlation work?\""
     )
 
-
-# ── Public entry point ────────────────────────────────────────────────────────
-
 def answer(question: str, db=None) -> str:
-    """Answer a question about the Cross-Layer system using advanced intent scoring."""
     q = question.lower().strip()
 
-    # 1. Score all intents in one pass
     scores = _score(q)
 
-    # 2. Extract entities
     entities = _extract_entities(q)
 
-    # 3. Fetch DB stats once (only if at least one matching intent needs them)
     needs_db = any(INTENTS[n].get("db_needed") for n in scores if n in INTENTS)
     stats: Optional[Dict] = None
     if db and needs_db:
@@ -852,30 +783,24 @@ def answer(question: str, db=None) -> str:
         except Exception:
             stats = None
 
-    # 4. Rank intents by score
     ranked = sorted(scores.items(), key=lambda x: -x[1])
 
     if not ranked:
         return _generic_fallback(question, [])
 
-    # 5. Framing intents always win (they are the most specific)
     framing = [n for n, _ in ranked if INTENTS.get(n, {}).get("framing")]
     if framing:
         return _answer_framing(framing[0], entities, stats)
 
-    # 6. Comparison intent wins if present
     if "compare" in scores:
         return _answer_comparison(entities, scores)
 
-    # 7. Single confident match
     top_name, top_score = ranked[0]
     if top_score >= TOP_THRESHOLD or len(ranked) == 1:
         return _dispatch(top_name, entities, stats, scores)
 
-    # 8. Multi-intent: combine top-N answers above COMBINE_THRESHOLD
     active = [(n, s) for n, s in ranked if s >= COMBINE_THRESHOLD][:MAX_COMBINED]
 
-    # Deduplicate: never combine anomaly + stats (anomaly already includes stats)
     intent_names = [n for n, _ in active]
     if "anomaly" in intent_names and "stats" in intent_names:
         active = [(n, s) for n, s in active if n != "stats"]

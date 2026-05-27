@@ -161,7 +161,7 @@ export class ApiService {
     return this.http.post<any>(`${this.base}/admin/compute-stats`, null);
   }
 
-  // ── Simulation ────────────────────────────────────────────────────────────
+
   startSimulation(params: {
     layer: string; rate: number; max_events: number;
     only_anomalies: boolean;
@@ -177,7 +177,7 @@ export class ApiService {
     return this.http.get<any>(`${this.base}/admin/simulate/status`);
   }
 
-  // ── Alert Rules CRUD ──────────────────────────────────────────────────────
+
   getAlertRules(): Observable<AlertRuleResponse[]> {
     return this.http.get<AlertRuleResponse[]>(`${this.base}/alert-rules/`);
   }
@@ -209,7 +209,7 @@ export class ApiService {
     );
   }
 
-  // ── Feedback ───────────────────────────────────────────────────────────────
+
   submitFeedback(incidentId: number, verdict: string, notes = ''): Observable<any> {
     return this.http.post<any>(`${this.base}/incidents/${incidentId}/feedback`, { verdict, notes });
   }
@@ -222,7 +222,7 @@ export class ApiService {
     return this.http.get<any>(`${this.base}/incidents/feedback/summary`);
   }
 
-  // ── Response Rules ────────────────────────────────────────────────────────���
+
   getResponseRules(): Observable<any[]> {
     return this.http.get<any[]>(`${this.base}/response-rules/`);
   }
@@ -260,7 +260,7 @@ export class ApiService {
     });
   }
 
-  // ── Live ingestion ──────────────────────────────────────────────────────────
+
   ingestEvent(event: {
     layer: string; source?: string; entity?: string;
     message?: string; timestamp?: string; features?: Record<string, number>;
@@ -307,7 +307,7 @@ export class ApiService {
               const parsed: StreamEvent = JSON.parse(line.slice(5).trim());
               observer.next(parsed);
               if (parsed.done) { observer.complete(); return; }
-            } catch { /* ignore malformed lines */ }
+            } catch {  }
           }
         }
         observer.complete();

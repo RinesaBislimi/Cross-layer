@@ -1,19 +1,3 @@
-"""LLM-powered analysis — supports Anthropic, Groq (free), and Ollama (local).
-
-Set LLM_PROVIDER in backend/.env:
-
-  Groq  (free, no credit card):
-      LLM_PROVIDER=groq
-      GROQ_API_KEY=gsk_...          # from console.groq.com
-
-  Ollama (fully local, no key):
-      LLM_PROVIDER=ollama
-      OLLAMA_MODEL=llama3           # after: ollama pull llama3
-
-  Anthropic (paid):
-      LLM_PROVIDER=anthropic
-      ANTHROPIC_API_KEY=sk-ant-...
-"""
 from __future__ import annotations
 
 import json
@@ -34,9 +18,6 @@ _SYSTEM_PROMPT = (
     "Be technical but accessible. Use bullet points where helpful."
 )
 
-
-# ── Low-level provider calls ─────────────────────────────────────────────────
-
 def _http_post(url: str, payload: dict, headers: dict, timeout: int = 90) -> dict:
     data = json.dumps(payload).encode()
     req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json", **headers})
@@ -49,9 +30,7 @@ def _http_post(url: str, payload: dict, headers: dict, timeout: int = 90) -> dic
     except urllib.error.URLError as exc:
         raise RuntimeError(f"Could not reach LLM endpoint ({url}): {exc.reason}") from exc
 
-
 def _stream_openai_compat(url: str, headers: dict, payload: dict):
-    """Yield text tokens from any OpenAI-compatible streaming endpoint (Groq, OpenAI)."""
     data = json.dumps({**payload, "stream": True}).encode()
     req = urllib.request.Request(
         url, data=data,
@@ -79,7 +58,6 @@ def _stream_openai_compat(url: str, headers: dict, payload: dict):
     except urllib.error.URLError as exc:
         raise RuntimeError(f"Could not reach LLM endpoint: {exc.reason}") from exc
 
-
 def _call_anthropic(system: str, prompt: str, max_tokens: int, api_key: str) -> str:
     if not api_key:
         raise RuntimeError(
@@ -88,7 +66,7 @@ def _call_anthropic(system: str, prompt: str, max_tokens: int, api_key: str) -> 
             "LLM_PROVIDER=groq  or  LLM_PROVIDER=ollama"
         )
     try:
-        import anthropic  # noqa: PLC0415
+        import anthropic
     except ImportError as exc:
         raise RuntimeError("anthropic package not installed. Run: pip install anthropic") from exc
 
@@ -113,7 +91,6 @@ def _call_anthropic(system: str, prompt: str, max_tokens: int, api_key: str) -> 
             ) from exc
         raise
 
-
 def _call_groq(system: str, prompt: str, max_tokens: int, api_key: str, model: str) -> str:
     if not api_key:
         raise RuntimeError(
@@ -135,7 +112,6 @@ def _call_groq(system: str, prompt: str, max_tokens: int, api_key: str, model: s
     )
     return result["choices"][0]["message"]["content"]
 
-
 def _call_ollama(system: str, prompt: str, base_url: str, model: str) -> str:
     base_url = (base_url or "http://localhost:11434").rstrip("/")
     result = _http_post(
@@ -152,7 +128,6 @@ def _call_ollama(system: str, prompt: str, base_url: str, model: str) -> str:
         timeout=180,
     )
     return result["message"]["content"]
-
 
 def _call_openai(system: str, prompt: str, max_tokens: int, api_key: str, model: str) -> str:
     if not api_key:
@@ -178,7 +153,6 @@ def _call_openai(system: str, prompt: str, max_tokens: int, api_key: str, model:
         return result["choices"][0]["message"]["content"]
     except (KeyError, IndexError) as exc:
         raise RuntimeError(f"Unexpected OpenAI response: {result}") from exc
-
 
 def _call_gemini(prompt: str, system: str, max_tokens: int, api_key: str, model: str) -> str:
     if not api_key:
@@ -206,15 +180,11 @@ def _call_gemini(prompt: str, system: str, max_tokens: int, api_key: str, model:
     except (KeyError, IndexError) as exc:
         raise RuntimeError(f"Unexpected Gemini response: {result}") from exc
 
-
-# ── Unified dispatcher ────────────────────────────────────────────────────────
-
 def _build_dataset_context(db) -> str:
-    """Query live DB stats and format them as context for the LLM."""
     if db is None:
         return ""
     try:
-        from sqlalchemy import text  # noqa: PLC0415
+        from sqlalchemy import text
         row = db.execute(text("""
             SELECT (SELECT COUNT(1) FROM log_events)               AS total_logs,
                    (SELECT COUNT(1) FROM log_events WHERE label=1) AS total_anomalies,
@@ -247,17 +217,15 @@ def _build_dataset_context(db) -> str:
     except Exception:
         return ""
 
-
 def _call_llm(system: str, prompt: str, max_tokens: int = 1024, db=None) -> str:
-    from ..config import get_settings  # noqa: PLC0415
+    from ..config import get_settings
     s = get_settings()
     provider = (s.LLM_PROVIDER or "local").lower()
 
     if provider == "local":
-        from .local_assistant import answer as local_answer  # noqa: PLC0415
+        from .local_assistant import answer as local_answer
         return local_answer(prompt, db=db)
 
-    # For all external providers inject live DB context into the system prompt
     ctx = _build_dataset_context(db)
     enriched_system = system + ("\n\n" + ctx if ctx else "")
 
@@ -277,11 +245,7 @@ def _call_llm(system: str, prompt: str, max_tokens: int = 1024, db=None) -> str:
             "Valid values: local | openai | gemini | groq | ollama | anthropic"
         )
 
-
-# ── Public API ────────────────────────────────────────────────────────────────
-
 def explain_incident(incident: Dict[str, Any], events: List[Dict[str, Any]], db=None) -> str:
-    """Generate a natural-language explanation of a cross-layer incident."""
     event_count = len(events)
     sample_messages = "\n".join(
         f"  [{e.get('layer','?')}] {e.get('message','')[:120]}"
@@ -313,7 +277,6 @@ def explain_incident(incident: Dict[str, Any], events: List[Dict[str, Any]], db=
     )
     return _call_llm(_SYSTEM_PROMPT, prompt, max_tokens=1024, db=db)
 
-
 _SOURCE_CONTEXT = {
     "bgl": (
         "BGL (Blue Gene/L) system logs — each record is a kernel/hardware event on a supercomputer node. "
@@ -337,7 +300,6 @@ _SOURCE_CONTEXT = {
     ),
 }
 
-
 def _source_context(source: str) -> str:
     key = (source or "").lower().replace("-", "").replace("2017", "")
     for k, v in _SOURCE_CONTEXT.items():
@@ -345,9 +307,7 @@ def _source_context(source: str) -> str:
             return v
     return f"Source: {source}"
 
-
 def _format_features(features: Dict[str, Any], max_items: int = 20) -> str:
-    """Return features sorted by absolute numeric value (most significant first)."""
     if not features:
         return ""
     numeric = [(k, v) for k, v in features.items() if isinstance(v, (int, float))]
@@ -363,15 +323,8 @@ def _format_features(features: Dict[str, Any], max_items: int = 20) -> str:
         lines.append(f"  {k}: {v}")
     return "\n".join(lines)
 
-
 def explain_log_event(log: Dict[str, Any], db=None,
                       extra_signals: Optional[List[str]] = None) -> str:
-    """Generate a pinned, value-specific explanation for a single anomalous log event.
-
-    Unlike a generic analysis, this prompt instructs the LLM to reference the
-    *exact feature values* present in this record and explain why those specific
-    numbers deviate from normal behaviour.
-    """
     source      = log.get("source", "unknown")
     layer       = log.get("layer",  "unknown")
     confidence  = log.get("confidence")
@@ -384,7 +337,6 @@ def explain_log_event(log: Dict[str, Any], db=None,
     conf_str = f"{round(confidence * 100, 1)}%" if confidence is not None else "unknown"
     features_str = _format_features(features)
 
-    # Build signal bullet list if provided by the caller
     signals_str = ""
     if extra_signals:
         signals_str = "\n".join(f"  • {s}" for s in extra_signals)
@@ -433,9 +385,7 @@ def explain_log_event(log: Dict[str, Any], db=None,
 
     return _call_llm(_SYSTEM_PROMPT, prompt, max_tokens=900, db=db)
 
-
 def chat(question: str, db=None) -> str:
-    """Answer a free-form question about the cross-layer detection system."""
     extended_system = (
         _SYSTEM_PROMPT
         + "\n\nYou can answer questions about:\n"
@@ -449,14 +399,8 @@ def chat(question: str, db=None) -> str:
     )
     return _call_llm(extended_system, question, max_tokens=1024, db=db)
 
-
 def stream_chat(question: str, db=None):
-    """Yield text tokens for a chat question.
-
-    For Groq and OpenAI: real token-by-token streaming.
-    For other providers: single chunk (full response yielded at once).
-    """
-    from ..config import get_settings  # noqa: PLC0415
+    from ..config import get_settings
     s = get_settings()
     provider = (s.LLM_PROVIDER or "local").lower()
 
@@ -488,7 +432,7 @@ def stream_chat(question: str, db=None):
                     "max_tokens": 1024,
                 },
             )
-        else:  # openai
+        else:
             if not s.OPENAI_API_KEY:
                 raise RuntimeError("OPENAI_API_KEY not set in backend/.env")
             yield from _stream_openai_compat(
@@ -501,5 +445,4 @@ def stream_chat(question: str, db=None):
                 },
             )
     else:
-        # Non-streaming providers: yield full response as one chunk
         yield chat(question, db=db)

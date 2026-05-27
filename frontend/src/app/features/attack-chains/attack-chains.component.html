@@ -1,6 +1,6 @@
 <div class="chains-page">
 
-  <!-- Header -->
+
   <div class="page-header">
     <div>
       <h1>Attack Chains</h1>
@@ -8,22 +8,22 @@
     </div>
   </div>
 
-  <!-- Loading -->
+
   <div *ngIf="loading" class="state-center">
     <div class="spinner"></div>
     <span class="state-label">Analyzing attack chains…</span>
   </div>
 
-  <!-- Error -->
+
   <div *ngIf="!loading && error" class="error-banner">
     <span class="error-icon">⚠</span>
     <span>{{ error }}</span>
   </div>
 
-  <!-- Content -->
+
   <ng-container *ngIf="!loading && !error">
 
-    <!-- Summary chips -->
+
     <div class="summary-row">
       <div class="summary-chip">
         <span class="chip-val">{{ chains.length }}</span>
@@ -39,37 +39,37 @@
       </div>
     </div>
 
-    <!-- Empty state -->
+
     <div *ngIf="chains.length === 0" class="empty-state card">
       <span class="empty-icon">🔗</span>
       <p>No attack chains detected yet.</p>
       <p class="empty-sub">Chains appear when multiple incidents share the same entity within 15-minute windows.</p>
     </div>
 
-    <!-- Chain cards -->
+
     <div class="chains-list">
       <div *ngFor="let chain of chains" class="chain-card card">
 
-        <!-- Card header -->
+
         <div class="chain-header" (click)="toggleExpand(chain.id)">
           <div class="chain-header-left">
-            <!-- Risk badge -->
+
             <span class="risk-badge" [class]="riskClass(chain.max_risk)">
               {{ riskLabel(chain.max_risk) }}
               <span class="risk-score">{{ (chain.max_risk * 100).toFixed(0) }}%</span>
             </span>
 
-            <!-- Cross-layer pill -->
+
             <span *ngIf="chain.cross_layer" class="cross-layer-pill">
               ⚡ CROSS-LAYER
             </span>
 
-            <!-- Entity -->
+
             <span class="chain-entity mono">{{ chain.entity || 'unknown' }}</span>
           </div>
 
           <div class="chain-header-right">
-            <!-- Time range -->
+
             <span class="chain-time">
               {{ formatDateShort(chain.start_time) }}
               <span *ngIf="chain.end_time && chain.end_time !== chain.start_time">
@@ -77,30 +77,30 @@
               </span>
             </span>
 
-            <!-- Expand toggle -->
+
             <button class="btn-expand" [class.expanded]="expandedId === chain.id">
               {{ expandedId === chain.id ? '▲' : '▼' }}
             </button>
           </div>
         </div>
 
-        <!-- Layer badges -->
+
         <div class="layer-row">
           <span *ngFor="let l of chain.layers" class="badge" [class]="layerClass(l)">{{ l }}</span>
           <span class="events-count">{{ chain.events?.length || 0 }} event{{ (chain.events?.length || 0) !== 1 ? 's' : '' }}</span>
         </div>
 
-        <!-- Expanded: event timeline -->
+
         <div *ngIf="expandedId === chain.id" class="timeline">
           <div class="timeline-line"></div>
           <div
             *ngFor="let evt of chain.events; let i = index; let last = last"
             class="timeline-event"
           >
-            <!-- Dot -->
+
             <div class="timeline-dot" [class]="riskClass(evt.risk_score)"></div>
 
-            <!-- Event content -->
+
             <div class="timeline-content">
               <div class="evt-header">
                 <span class="evt-time">{{ formatTime(evt.start_time) }}</span>

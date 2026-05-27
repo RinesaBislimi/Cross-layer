@@ -1,4 +1,3 @@
-"""CRUD REST endpoints for alert rules stored in the database."""
 
 import logging
 from datetime import datetime, timedelta
@@ -15,16 +14,12 @@ from ..models.incidents import Incident
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/alert-rules", tags=["alert-rules"])
 
-
-# ── Pydantic schemas ──────────────────────────────────────────────────────────
-
 class AlertRuleCreate(BaseModel):
     name:          str
     condition:     str
     layer:         str  = ""
     notify_method: str  = "browser"
     notify_target: str  = ""
-
 
 class AlertRuleOut(BaseModel):
     id:            int
@@ -41,9 +36,7 @@ class AlertRuleOut(BaseModel):
     class Config:
         from_attributes = True
 
-
 def _to_out(r):
-    # type: (AlertRule) -> dict
     return {
         "id":            r.id,
         "name":          r.name,
@@ -57,19 +50,13 @@ def _to_out(r):
         "last_fired_at": r.last_fired_at.isoformat() if r.last_fired_at else None,
     }
 
-
-# ── Endpoints ─────────────────────────────────────────────────────────────────
-
 @router.get("/")
 def list_rules(db: Session = Depends(get_db)):
-    """Return all alert rules, newest first."""
     rules = db.query(AlertRule).order_by(AlertRule.id.desc()).all()
     return [_to_out(r) for r in rules]
 
-
 @router.post("/", status_code=201)
 def create_rule(payload: AlertRuleCreate, db: Session = Depends(get_db)):
-    """Create a new alert rule."""
     if not payload.name.strip():
         raise HTTPException(status_code=422, detail="Rule name is required.")
     valid_conditions = {
@@ -102,20 +89,16 @@ def create_rule(payload: AlertRuleCreate, db: Session = Depends(get_db)):
     logger.info("Alert rule created: id=%s name=%r", rule.id, rule.name)
     return _to_out(rule)
 
-
 @router.delete("/{rule_id}", status_code=204)
 def delete_rule(rule_id: int, db: Session = Depends(get_db)):
-    """Delete an alert rule by id."""
     rule = db.query(AlertRule).filter(AlertRule.id == rule_id).first()
     if not rule:
         raise HTTPException(status_code=404, detail="Rule not found.")
     db.delete(rule)
     db.commit()
 
-
 @router.patch("/{rule_id}/toggle")
 def toggle_rule(rule_id: int, db: Session = Depends(get_db)):
-    """Toggle the enabled state of a rule."""
     rule = db.query(AlertRule).filter(AlertRule.id == rule_id).first()
     if not rule:
         raise HTTPException(status_code=404, detail="Rule not found.")
@@ -124,14 +107,8 @@ def toggle_rule(rule_id: int, db: Session = Depends(get_db)):
     db.refresh(rule)
     return _to_out(rule)
 
-
-# ── Debug / manual trigger ────────────────────────────────────────────────────
-
 @router.post("/trigger")
 def trigger_now(limit: int = 100, db: Session = Depends(get_db)):
-    """Manually evaluate all enabled rules against the *limit* most recent
-    incidents and return a full diagnostic report.  Does NOT respect the
-    cooldown — forces evaluation regardless of last_fired_at."""
     from ..services.alert_service import _rule_matches, _send_email_sync
     import threading
 
@@ -197,10 +174,8 @@ def trigger_now(limit: int = 100, db: Session = Depends(get_db)):
 
     return report
 
-
 @router.get("/debug")
 def debug_rules(db: Session = Depends(get_db)):
-    """Diagnostic: show rules + a sample of recent incidents + what each rule would match."""
     from ..services.alert_service import _rule_matches
 
     rules     = db.query(AlertRule).all()

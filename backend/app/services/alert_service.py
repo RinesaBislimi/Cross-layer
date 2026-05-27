@@ -1,9 +1,3 @@
-"""Backend alert rule evaluation.
-
-Called after every incident-generation batch.  Loads all enabled AlertRule
-rows, checks each rule against the new incidents, fires email / webhook once
-per rule per cooldown window (default 5 min), and updates trigger_count.
-"""
 
 import json as _json
 import logging
@@ -26,16 +20,10 @@ logger = logging.getLogger(__name__)
 _COOLDOWN_MINUTES = 5
 _SEV_SCORE = {"critical": 0.90, "high": 0.75, "medium": 0.50, "low": 0.25}
 
-
 def _sev_score(sev):
-    # type: (Optional[str]) -> float
     return _SEV_SCORE.get((sev or "").lower(), 0.25)
 
-
-# ── Rule matching ─────────────────────────────────────────────────────────────
-
 def _rule_matches(rule, incident):
-    # type: (AlertRule, Incident) -> bool
     sev      = (incident.severity or "").lower()
     attrs    = incident.attributes or {}
     layers   = attrs.get("layers", []) if isinstance(attrs, dict) else []
@@ -53,19 +41,13 @@ def _rule_matches(rule, incident):
     if cond == "entity_repeat":     return bool(incident.entity)
     return False
 
-
-# ── Severity helpers ──────────────────────────────────────────────────────────
-
 def _max_severity(incidents):
-    # type: (List[Incident]) -> str
     for s in ("critical", "high", "medium", "low"):
         if any((inc.severity or "").lower() == s for inc in incidents):
             return s
     return "unknown"
 
-
 def _sev_counts(incidents):
-    # type: (List[Incident]) -> dict
     counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
     for inc in incidents:
         s = (inc.severity or "").lower()
@@ -73,11 +55,7 @@ def _sev_counts(incidents):
             counts[s] += 1
     return counts
 
-
-# ── Email builder ─────────────────────────────────────────────────────────────
-
 def _build_email(rule, incidents, now, is_test=False):
-    # type: (AlertRule, List[Incident], datetime, bool) -> MIMEMultipart
     count           = len(incidents)
     condition_label = rule.condition.replace("_", " ").title()
     max_sev         = _max_severity(incidents) if incidents else "unknown"
@@ -90,7 +68,6 @@ def _build_email(rule, incidents, now, is_test=False):
         test_prefix, rule.name, count, "s" if count != 1 else ""
     )
 
-    # ── Severity count boxes ──────────────────────────────────────────────────
     sev_cells_html = ""
     for sev, label in (("critical", "Critical"), ("high", "High"),
                        ("medium", "Medium"), ("low", "Low")):
@@ -104,7 +81,6 @@ def _build_email(rule, incidents, now, is_test=False):
             "</div></td>"
         ) % (n, label)
 
-    # ── Incident table rows ───────────────────────────────────────────────────
     rows_html  = ""
     plain_list = ""
     for inc in incidents[:15]:
@@ -139,7 +115,6 @@ def _build_email(rule, incidents, now, is_test=False):
         ) % (count - 15)
         plain_list += "  ... and %d more\n" % (count - 15)
 
-    # ── Test notice row ───────────────────────────────────────────────────────
     test_row_html = ""
     if is_test:
         test_row_html = (
@@ -150,7 +125,6 @@ def _build_email(rule, incidents, now, is_test=False):
             "</div></td></tr>"
         )
 
-    # ── Full HTML ─────────────────────────────────────────────────────────────
     html_body = """\
 <!DOCTYPE html>
 <html>
@@ -313,7 +287,6 @@ def _build_email(rule, incidents, now, is_test=False):
         test_row    = test_row_html,
     )
 
-    # ── Plain text fallback ───────────────────────────────────────────────────
     text_body = (
         "%sCrossLayer Security Alert\n"
         "%s\n\n"
@@ -344,9 +317,7 @@ def _build_email(rule, incidents, now, is_test=False):
     msg.attach(MIMEText(html_body, "html"))
     return msg
 
-
 def _send_email_sync(rule, incidents, now):
-    # type: (AlertRule, List[Incident], datetime) -> None
     cfg = get_settings()
     if not cfg.SMTP_USER or not cfg.SMTP_PASS or cfg.SMTP_USER == "your_gmail@gmail.com":
         logger.warning("SMTP not configured -- skipping email for rule '%s'", rule.name)
@@ -363,9 +334,7 @@ def _send_email_sync(rule, incidents, now):
     except Exception as exc:
         logger.error("Alert email failed for rule '%s': %s", rule.name, exc)
 
-
 def _send_webhook(url, payload):
-    # type: (str, dict) -> None
     try:
         data = _json.dumps(payload).encode()
         req  = _req.Request(
@@ -377,18 +346,8 @@ def _send_webhook(url, payload):
     except Exception as exc:
         logger.warning("Webhook POST failed (%s): %s", url, exc)
 
-
-# ── Public API ────────────────────────────────────────────────────────────────
-
 def evaluate_and_fire(db, incidents):
-    # type: (Session, List[Incident]) -> int
-    """Evaluate enabled alert rules against *incidents*.
 
-    Skips rules inside their cooldown window.
-    Fires email (background thread) or webhook for each matching rule.
-    Updates trigger_count and last_fired_at, commits once.
-    Returns the number of rules that fired.
-    """
     if not incidents:
         return 0
 

@@ -1,6 +1,6 @@
 <div class="entities-page" [class.has-detail]="selectedEntity !== null">
 
-  <!-- Header -->
+
   <div class="page-header">
     <div>
       <h1>Entity Risk Profiler</h1>
@@ -11,22 +11,22 @@
     </div>
   </div>
 
-  <!-- Loading -->
+
   <div *ngIf="loading" class="state-center">
     <div class="spinner"></div>
     <span class="state-label">Loading entity profiles…</span>
   </div>
 
-  <!-- Error -->
+
   <div *ngIf="!loading && error" class="error-banner">
     <span class="error-icon">⚠</span>
     <span>{{ error }}</span>
   </div>
 
-  <!-- Two-column layout -->
+
   <div *ngIf="!loading && !error" class="content-layout">
 
-    <!-- Entity list -->
+
     <div class="entity-list">
       <div
         *ngFor="let e of entities"
@@ -34,7 +34,7 @@
         [class.entity-card-active]="selectedEntity === e.entity"
         (click)="selectEntity(e.entity)"
       >
-        <!-- Name + risk badge -->
+
         <div class="entity-head">
           <span class="entity-name mono">{{ e.entity }}</span>
           <span class="risk-pill" [class]="riskClass(e.max_risk)">
@@ -42,7 +42,7 @@
           </span>
         </div>
 
-        <!-- Risk bar -->
+
         <div class="risk-bar-track">
           <div
             class="risk-bar-fill"
@@ -55,13 +55,13 @@
           <span class="risk-score-label">Avg: {{ (e.avg_risk * 100).toFixed(0) }}%</span>
         </div>
 
-        <!-- Meta row -->
+
         <div class="entity-meta">
           <span class="incident-count">{{ e.incident_count }} incident{{ e.incident_count !== 1 ? 's' : '' }}</span>
           <span class="last-seen">{{ formatDateShort(e.last_seen) }}</span>
         </div>
 
-        <!-- Layers + severities -->
+
         <div class="badge-row">
           <span *ngFor="let l of e.layers" class="badge" [class]="layerClass(l)">{{ l }}</span>
         </div>
@@ -70,16 +70,16 @@
         </div>
       </div>
 
-      <!-- Empty -->
+
       <div *ngIf="entities.length === 0" class="empty-state">
         <span class="empty-icon">🔍</span>
         <p>No entities found</p>
       </div>
     </div>
 
-    <!-- Detail panel -->
+
     <div *ngIf="selectedEntity" class="detail-panel card">
-      <!-- Detail header -->
+
       <div class="detail-header">
         <div>
           <h2 class="detail-title mono">{{ selectedEntity }}</h2>
@@ -88,19 +88,19 @@
         <button class="btn-close" (click)="closeDetail()">✕</button>
       </div>
 
-      <!-- Detail loading -->
+
       <div *ngIf="detailLoading" class="state-center state-sm">
         <div class="spinner"></div>
         <span class="state-label">Loading incidents…</span>
       </div>
 
-      <!-- Detail error -->
+
       <div *ngIf="!detailLoading && detailError" class="error-banner">
         <span class="error-icon">⚠</span>
         <span>{{ detailError }}</span>
       </div>
 
-      <!-- Incidents table -->
+
       <div *ngIf="!detailLoading && entityDetail" class="detail-table-wrap">
         <table class="detail-table">
           <thead>

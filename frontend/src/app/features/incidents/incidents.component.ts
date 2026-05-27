@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
 import { WebSocketService } from '../../core/services/websocket.service';
+import { VoiceNotificationService } from '../../core/services/voice-notification.service';
 import { Incident } from '../../shared/models/incident';
 import { LogEvent } from '../../shared/models/log-event';
 import { Subject, takeUntil, debounceTime } from 'rxjs';
@@ -30,11 +31,15 @@ export class IncidentsComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   private _refresh$ = new Subject<void>();
 
-  constructor(private api: ApiService, private ws: WebSocketService) {}
+  constructor(
+    private api: ApiService,
+    private ws: WebSocketService,
+    public voice: VoiceNotificationService,
+  ) {}
 
   ngOnInit(): void {
     this.load();
-    // Auto-refresh when anomaly/incident WS messages arrive (debounced 3s)
+
     this.ws.messages.pipe(takeUntil(this.destroy$)).subscribe((msg: any) => {
       if (msg?.type === 'log_anomaly' || msg?.type === 'incident' || msg?.type === 'incident_batch') {
         this._refresh$.next();
@@ -134,12 +139,12 @@ export class IncidentsComponent implements OnInit, OnDestroy {
     return typeof n === 'number' ? n : (inc.events?.length ?? 0);
   }
 
-  /** Human-readable description stored in attributes, or derived from type as fallback. */
+
   descriptionLabel(inc: Incident): string {
     const stored = inc.attributes?.['description'];
     if (typeof stored === 'string' && stored.trim()) return stored;
 
-    // Fallback: derive a readable label from the type field
+
     const t = inc.type || '';
     if (t.startsWith('ML:')) {
       const src = t.replace('ML:', '');
@@ -171,7 +176,7 @@ export class IncidentsComponent implements OnInit, OnDestroy {
     return map[mode ?? ''] ?? mode ?? '';
   }
 
-  // ── Analyst feedback ─────────────────────────────────────────────────────
+
   feedbackState: Record<number, { verdict: string; submitting: boolean; done: boolean }> = {};
 
   submitFeedback(inc: Incident, verdict: string): void {
@@ -195,7 +200,7 @@ export class IncidentsComponent implements OnInit, OnDestroy {
     return '';
   }
 
-  // ── AI explain ────────────────────────────────────────────────────────────
+
   aiExplanation: string | null = null;
   aiLoading = false;
   aiError: string | null = null;

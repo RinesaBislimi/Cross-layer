@@ -1,4 +1,3 @@
-"""Live log ingestion endpoint — accept a single event, score it in real-time."""
 
 from __future__ import annotations
 
@@ -19,24 +18,17 @@ from ..models.incidents import Incident
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/ingest", tags=["ingest"])
 
-
-# ── Pydantic input schema ─────────────────────────────────────────────────────
-
 class LogEventIn(BaseModel):
-    layer:     str                          # bgl | cicids | tda | network | system | application
+    layer:     str
     source:    str = ""
     entity:    Optional[str] = None
     message:   str = ""
-    timestamp: Optional[str] = None        # ISO-8601 or None → server time
+    timestamp: Optional[str] = None
     features:  Optional[Dict[str, Any]] = None
     raw:       Optional[str] = None
     metadata:  Optional[Dict[str, Any]] = None
 
-
-# ── Model loader (cached) ─────────────────────────────────────────────────────
-
 _model_cache: Dict[str, Any] = {}
-
 
 def _load_model(name: str):
     if name in _model_cache:
@@ -68,14 +60,7 @@ def _load_model(name: str):
         logger.warning("Could not load model '%s': %s", name, exc)
         return None
 
-
 def _score_event(event: LogEventIn, fallback_label: int = 0) -> tuple[int, float]:
-    """Return (label, confidence) by running the appropriate model.
-
-    Falls back to fallback_label (default 0) if no model is available.
-    Pass the event's original DB label as fallback_label to get meaningful
-    simulation results even before training.
-    """
     layer_map = {
         "bgl": "bgl", "system": "bgl",
         "cicids": "cicids", "network": "cicids",
@@ -102,7 +87,6 @@ def _score_event(event: LogEventIn, fallback_label: int = 0) -> tuple[int, float
         feat_cols = col_map.get(model_key, [])
         feats = event.features or {}
 
-        # Build feature vector — missing features default to 0
         vec = np.array([[feats.get(c, 0) for c in feat_cols]], dtype=float)
 
         if hasattr(model, "predict_proba"):
@@ -120,14 +104,8 @@ def _score_event(event: LogEventIn, fallback_label: int = 0) -> tuple[int, float
         logger.warning("Scoring failed for %s event: %s", event.layer, exc)
         return 0, 0.0
 
-
-# ── Endpoints ─────────────────────────────────────────────────────────────────
-
 @router.post("/event")
 def ingest_event(payload: LogEventIn, db: Session = Depends(get_db)):
-    """Ingest a single log event, score it with the trained ML model, and return
-    the scored result.  If the event is an anomaly, it is also written to the DB.
-    """
     ts = datetime.utcnow()
     if payload.timestamp:
         try:
@@ -164,7 +142,6 @@ def ingest_event(payload: LogEventIn, db: Session = Depends(get_db)):
         "anomaly":    label == 1,
     }
 
-    # If anomaly detected → broadcast via WebSocket
     if label == 1:
         try:
             from ..ws.realtime import manager
@@ -179,14 +156,12 @@ def ingest_event(payload: LogEventIn, db: Session = Depends(get_db)):
                 })
             )
         except Exception:
-            pass  # WebSocket broadcast is best-effort
+            pass
 
     return result
 
-
 @router.post("/events/batch")
 def ingest_batch(events: List[LogEventIn], db: Session = Depends(get_db)):
-    """Ingest and score a batch of log events (up to 500 at once)."""
     if len(events) > 500:
         raise HTTPException(status_code=400, detail="Batch size limit is 500 events.")
 
@@ -224,11 +199,10 @@ def ingest_batch(events: List[LogEventIn], db: Session = Depends(get_db)):
 
     db.commit()
 
-    # Evaluate alert rules against batch anomalies
     if anomalies_created:
         try:
             from ..services.alert_service import evaluate_and_fire
-            db.refresh(anomalies_created[0])  # ensure IDs are populated
+            db.refresh(anomalies_created[0])
         except Exception:
             pass
 

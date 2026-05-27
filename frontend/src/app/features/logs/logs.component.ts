@@ -86,9 +86,9 @@ export class LogsComponent implements OnInit {
     try { return JSON.stringify(f, null, 2); } catch { return String(f); }
   }
 
-  // ── Anomaly reason helpers ───────────────────────────────────────────────
 
-  /** Confidence 0-100 from stored value or undefined */
+
+
   confidencePct(log: LogEvent): number | null {
     if (log.confidence == null) return null;
     return Math.round(log.confidence * 100);
@@ -108,7 +108,7 @@ export class LogsComponent implements OnInit {
     return 'conf-low';
   }
 
-  /** Top 5 numeric features sorted by absolute value — proxy for ML importance */
+
   topFeatures(log: LogEvent): FeatureTip[] {
     if (!log.features) return [];
     const entries = Object.entries(log.features)
@@ -127,7 +127,7 @@ export class LogsComponent implements OnInit {
     }));
   }
 
-  /** Source-specific heuristic signals derived from raw message / features */
+
   anomalySignals(log: LogEvent): string[] {
     const signals: string[] = [];
     const raw   = (log.raw     || '').toUpperCase();
@@ -138,7 +138,7 @@ export class LogsComponent implements OnInit {
     const src = (log.source || '').toUpperCase();
 
     if (src.includes('BGL')) {
-      // BGL = system/kernel logs
+
       if (/FATAL|FAILURE|FAIL|HARDWARE|FAULT/.test(text))   signals.push('Hardware fault detected');
       if (/UNCORRECTABLE|ECC|PARITY/.test(text))             signals.push('Memory error (ECC / parity)');
       if (/KERNEL PANIC|OOPS|BUG:/.test(text))              signals.push('Kernel panic / oops');
@@ -147,7 +147,7 @@ export class LogsComponent implements OnInit {
     }
 
     if (src.includes('CICIDS')) {
-      // CICIDS = network flow features
+
       const bps   = (feats['Flow Bytes/s']     ?? feats['flow_bytes_s']     ?? 0) as number;
       const pps   = (feats['Flow Packets/s']   ?? feats['flow_packets_s']   ?? 0) as number;
       const dur   = (feats['Flow Duration']    ?? feats['flow_duration']    ?? -1) as number;
@@ -164,7 +164,7 @@ export class LogsComponent implements OnInit {
     }
 
     if (src.includes('TDA')) {
-      // TDA = database / application access logs
+
       if (/DROP|TRUNCATE|DELETE\s+FROM\s+\w+\s*;/.test(text)) signals.push('Destructive SQL command');
       if (/UNION\s+SELECT|1=1|OR\s+1|--\s/.test(text))        signals.push('SQL injection pattern');
       if (/EXEC|EXECUTE|XP_|SP_/.test(text))                  signals.push('Stored procedure / exec call');
@@ -173,7 +173,7 @@ export class LogsComponent implements OnInit {
       if (q > 1000) signals.push(`High query volume: ${q.toLocaleString()} queries`);
     }
 
-    // Generic signals
+
     if (/PRIVILEGE|ROOT|SUDO|ADMIN|ESCALAT/.test(text)) signals.push('Privilege escalation keyword');
     if (/BRUTE|PASSWORD|AUTH\s+FAIL|INVALID\s+USER/.test(text)) signals.push('Authentication failure pattern');
     if (/MALWARE|RANSOMWARE|EXPLOIT|SHELLCODE/.test(text)) signals.push('Malware keyword detected');

@@ -28,7 +28,7 @@
 
   <ng-container *ngIf="!loading && stats && stats.total_logs > 0">
 
-    <!-- KPI row -->
+
     <section class="kpi-row">
       <div class="kpi-card">
         <div class="kpi-icon kpi-blue">📋</div>
@@ -63,7 +63,7 @@
       </div>
     </section>
 
-    <!-- Incident charts (severity + detection method) -->
+
     <div class="charts-grid" *ngIf="stats.total_incidents > 0">
       <section class="card chart-card">
         <h2>Incidents by severity</h2>
@@ -75,7 +75,7 @@
       </section>
     </div>
 
-    <!-- Log volume charts (only when layer/source data is available) -->
+
     <div class="charts-grid" *ngIf="stats.logs_by_layer?.length">
       <section class="card chart-card">
         <h2>
@@ -93,7 +93,7 @@
       </section>
     </div>
 
-    <!-- Anomaly rate + Incident timeline -->
+
     <div class="charts-grid" *ngIf="stats.logs_by_layer?.length || recentIncidents.length > 1">
       <section class="card chart-card" *ngIf="stats.logs_by_layer?.length">
         <h2>Anomaly rate by layer</h2>
@@ -105,7 +105,7 @@
       </section>
     </div>
 
-    <!-- Tabs -->
+
     <div class="stat-tabs">
       <button class="stat-tab" [class.active]="activeTab==='incidents'" (click)="setTab('incidents')">
         🚨 Recent Incidents <span class="tab-count" *ngIf="recentIncidents.length">{{ recentIncidents.length }}</span>
@@ -115,7 +115,7 @@
       </button>
     </div>
 
-    <!-- Incidents table -->
+
     <section class="card table-card" *ngIf="activeTab === 'incidents'">
       <h2>Recent incidents <span class="table-sub">last {{ recentIncidents.length }} records</span></h2>
       <div class="empty-state" *ngIf="!recentIncidents.length">
@@ -139,7 +139,7 @@
       </table>
     </section>
 
-    <!-- Logs table -->
+
     <section class="card table-card" *ngIf="activeTab === 'logs'">
       <h2>Recent log events <span class="table-sub">last {{ recentLogs.length }} records</span></h2>
       <table class="data-table" *ngIf="recentLogs.length">

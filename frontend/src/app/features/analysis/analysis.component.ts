@@ -27,7 +27,7 @@ export interface TrainingMetrics {
   accuracy: number; mcc: number;
   tp: number; tn: number; fp: number; fn: number;
   n_positive: number; n_negative: number; n_total: number;
-  // Train-split extras
+
   train_time_s?: number; n_features?: number;
   n_train?: number; model_type?: string;
   roc_auc?: number; avg_precision?: number;
@@ -68,7 +68,7 @@ export class AnalysisComponent implements OnInit {
   @ViewChild('featureChart')    featureChart?:    ElementRef<HTMLCanvasElement>;
   @ViewChild('thresholdChart')  thresholdChart?:  ElementRef<HTMLCanvasElement>;
 
-  // Loading states per step
+
   ingestLoading = false;
   trainLoading  = false;
   generateLoading = false;
@@ -123,7 +123,7 @@ export class AnalysisComponent implements OnInit {
   selectedEntry: HistoryEntry | null = null;
   private chart: Chart | null = null;
 
-  // Step completion state
+
   step1Done = false;
   step2Done = false;
   step3Done = false;
@@ -147,9 +147,9 @@ export class AnalysisComponent implements OnInit {
 
   private _saveHistory(): void {
     try {
-      const payload = JSON.stringify(this.history.slice(0, 50)); // keep last 50
+      const payload = JSON.stringify(this.history.slice(0, 50));
       localStorage.setItem(AnalysisComponent.STORAGE_KEY, payload);
-    } catch { /* quota exceeded — silently skip */ }
+    } catch {  }
   }
 
   private _loadHistory(): void {
@@ -157,7 +157,7 @@ export class AnalysisComponent implements OnInit {
       const raw = localStorage.getItem(AnalysisComponent.STORAGE_KEY);
       if (!raw) return;
       const parsed: HistoryEntry[] = JSON.parse(raw);
-      // Restore Date objects (JSON serialises them as strings)
+
       this.history = parsed.map(e => ({ ...e, timestamp: new Date(e.timestamp) }));
       if (this.history.length) {
         this.historyCounter = Math.max(...this.history.map(e => e.id));
@@ -176,7 +176,7 @@ export class AnalysisComponent implements OnInit {
     });
   }
 
-  // ── Ingestion ─────────────────────────────────────────────────
+
   ingestBgl(): void    { this._runIngest('Ingest BGL',    () => this.api.ingestBgl()); }
   ingestCicids(): void { this._runIngest('Ingest CICIDS', () => this.api.ingestCicids()); }
   ingestTda(): void    { this._runIngest('Ingest TDA',    () => this.api.ingestTda()); }
@@ -199,7 +199,7 @@ export class AnalysisComponent implements OnInit {
     });
   }
 
-  // ── Training ──────────────────────────────────────────────────
+
   trainBgl(): void        { this._runTrain('Train BGL',         () => this.api.trainBgl(this.modelType)); }
   trainCicids(): void     { this._runTrain('Train CICIDS',      () => this.api.trainCicids(this.modelType)); }
   trainTda(): void        { this._runTrain('Train TDA',         () => this.api.trainTda(this.modelType)); }
@@ -226,7 +226,7 @@ export class AnalysisComponent implements OnInit {
     });
   }
 
-  // ── Generation ────────────────────────────────────────────────
+
   generateCrossLayerIncidents(): void {
     this._runGenerate('Generate Cross-layer incidents', () => this.api.generateCrossLayerIncidents());
   }
@@ -234,7 +234,7 @@ export class AnalysisComponent implements OnInit {
     this._runGenerate('Generate ML incidents', () => this.api.generateMlIncidents());
   }
 
-  // ── Fix labels ────────────────────────────────────────────────────────────
+
   fixLoading = false;
   fixResult  = '';
 
@@ -256,7 +256,7 @@ export class AnalysisComponent implements OnInit {
     });
   }
 
-  // ── Clear simulated incidents ─────────────────────────────────
+
   clearSimLoading = false;
   clearSimResult  = '';
 
@@ -275,7 +275,7 @@ export class AnalysisComponent implements OnInit {
     });
   }
 
-  // ── Semantic entity enrichment ─────────────────────────────────
+
   enrichLoading = false;
   enrichResult  = '';
 
@@ -294,7 +294,7 @@ export class AnalysisComponent implements OnInit {
     });
   }
 
-  // ── Live simulation ─────────────────────────────────────────────
+
   simLayer        = 'bgl';
   simRate         = 10;
   simMax          = 300;
@@ -377,7 +377,7 @@ export class AnalysisComponent implements OnInit {
     });
   }
 
-  // ── History helpers ───────────────────────────────────────────
+
   private _addRunning(action: string, step: 1 | 2 | 3): HistoryEntry {
     const entry: HistoryEntry = {
       id: ++this.historyCounter,
@@ -497,14 +497,14 @@ export class AnalysisComponent implements OnInit {
     });
   }
 
-  // ── ROC Curve chart ───────────────────────────────────────────
+
   private _buildRocChart(splits: Record<string, TrainingMetrics>): void {
     const canvas = this.rocChart?.nativeElement;
     if (!canvas) return;
     this._rocChart?.destroy();
     const colors = ['#4f46e5', '#059669', '#f59e0b'];
     const datasets: any[] = [];
-    // diagonal reference line
+
     datasets.push({ label: 'Random (AUC=0.5)', data: [{x:0,y:0},{x:1,y:1}], borderColor: '#94a3b8', borderDash: [6,4], borderWidth: 1.5, pointRadius: 0, fill: false });
     Object.entries(splits).forEach(([split, m], i) => {
       if (!m.roc_curve) return;
@@ -525,7 +525,7 @@ export class AnalysisComponent implements OnInit {
     });
   }
 
-  // ── Precision-Recall curve ────────────────────────────────────
+
   private _buildPrChart(splits: Record<string, TrainingMetrics>): void {
     const canvas = this.prChart?.nativeElement;
     if (!canvas) return;
@@ -550,7 +550,7 @@ export class AnalysisComponent implements OnInit {
     });
   }
 
-  // ── Feature importance chart ──────────────────────────────────
+
   private _buildFeatureChart(splits: Record<string, TrainingMetrics>): void {
     const canvas = this.featureChart?.nativeElement;
     if (!canvas) return;
@@ -571,7 +571,7 @@ export class AnalysisComponent implements OnInit {
     });
   }
 
-  // ── Threshold analysis chart ──────────────────────────────────
+
   private _buildThresholdChart(splits: Record<string, TrainingMetrics>): void {
     const canvas = this.thresholdChart?.nativeElement;
     if (!canvas) return;
@@ -601,7 +601,7 @@ export class AnalysisComponent implements OnInit {
     });
   }
 
-  // ── Helpers ───────────────────────────────────────────────────
+
   hasRoc(entry: HistoryEntry): boolean {
     return !!Object.values(entry.metricsBySplit ?? {}).find(m => m.roc_curve);
   }
@@ -622,7 +622,7 @@ export class AnalysisComponent implements OnInit {
     return entry.metricsBySplit?.['Train']?.cv_scores ?? null;
   }
 
-  // ── Confusion matrix helpers ──────────────────────────────────
+
   cmSplits(entry: HistoryEntry): string[] {
     return entry.metricsBySplit ? Object.keys(entry.metricsBySplit) : [];
   }
@@ -637,7 +637,7 @@ export class AnalysisComponent implements OnInit {
     return (((m.tp + m.tn) / total) * 100).toFixed(1) + '%';
   }
 
-  // ── Model status helpers ──────────────────────────────────────
+
   get trainedCount(): number { return this.modelStatuses.filter(m => m.trained).length; }
   get totalModels(): number  { return this.modelStatuses.length; }
 

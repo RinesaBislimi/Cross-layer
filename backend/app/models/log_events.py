@@ -1,4 +1,3 @@
-# models/log_event.py
 from datetime import datetime
 from sqlalchemy import Column, DateTime, Index, Integer, String, Float, JSON, Text
 from .base import Base
@@ -10,8 +9,8 @@ class LogEvent(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     timestamp = Column(DateTime, nullable=False, index=True)
-    layer = Column(String(50), nullable=False, index=True)   # system, network, application
-    source = Column(String(50), nullable=False, index=True)  # BGL, CICIDS2017, TDA
+    layer = Column(String(50), nullable=False, index=True)
+    source = Column(String(50), nullable=False, index=True)
     entity = Column(String(100), index=True, nullable=True)
     label = Column(Integer, nullable=True, default=0, index=True)
     confidence = Column(Float, nullable=True)
@@ -20,7 +19,6 @@ class LogEvent(Base):
     features = Column(JSON, nullable=True)
     metadata_json = Column(JSON, nullable=True)
 
-    # Composite indexes used heavily by training and ML scoring queries
     __table_args__ = (
         Index("ix_log_events_source_label", "source", "label"),
         Index("ix_log_events_source_ts",    "source", "timestamp"),

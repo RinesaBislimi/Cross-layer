@@ -28,33 +28,29 @@ except ImportError:
 
 SUPPORTED_MODEL_TYPES = ("rf", "xgboost", "lgbm", "svm", "mlp", "isolation_forest")
 
-
 class _IsolationForestWrapper:
-    """Wraps IsolationForest to expose predict/predict_proba like a classifier."""
 
     def __init__(self, contamination: float = 0.1, random_state: int = 42, **kwargs):
         self._if = IsolationForest(
             contamination=contamination, random_state=random_state, **kwargs
         )
 
-    def fit(self, X, y=None):  # noqa: N803
+    def fit(self, X, y=None):
         self._if.fit(X)
         return self
 
-    def predict(self, X):  # noqa: N803
-        # IsolationForest: -1 = anomaly, 1 = normal → remap 1=anomaly, 0=normal
+    def predict(self, X):
         raw = self._if.predict(X)
         return (raw == -1).astype(int)
 
-    def predict_proba(self, X):  # noqa: N803
-        scores = self._if.score_samples(X)  # log density: lower = more anomalous
+    def predict_proba(self, X):
+        scores = self._if.score_samples(X)
         min_s, max_s = scores.min(), scores.max()
         if max_s == min_s:
             proba_anomaly = np.full(len(scores), 0.5)
         else:
             proba_anomaly = 1.0 - (scores - min_s) / (max_s - min_s)
         return np.column_stack([1.0 - proba_anomaly, proba_anomaly])
-
 
 def train_rf_classifier(
     X, y, n_estimators: int = 100, random_state: int = 42
@@ -64,7 +60,6 @@ def train_rf_classifier(
     )
     model.fit(X, y)
     return model
-
 
 def train_xgb_classifier(
     X, y, n_estimators: int = 100, random_state: int = 42, **kwargs: Any
@@ -77,7 +72,6 @@ def train_xgb_classifier(
     )
     model.fit(X, y)
     return model
-
 
 def train_lgbm_classifier(X, y, n_estimators: int = 100, random_state: int = 42):
     if not _LGBM_AVAILABLE:
@@ -92,13 +86,11 @@ def train_lgbm_classifier(X, y, n_estimators: int = 100, random_state: int = 42)
     model.fit(X, y)
     return model
 
-
 def train_svm_classifier(X, y, random_state: int = 42):
     base = LinearSVC(random_state=random_state, max_iter=2000)
     model = CalibratedClassifierCV(base, cv=3)
     model.fit(X, y)
     return model
-
 
 def train_mlp_classifier(X, y, random_state: int = 42):
     model = MLPClassifier(
@@ -111,18 +103,14 @@ def train_mlp_classifier(X, y, random_state: int = 42):
     model.fit(X, y)
     return model
 
-
 def train_isolation_forest(X, contamination: float = 0.1, random_state: int = 42):
     model = _IsolationForestWrapper(contamination=contamination, random_state=random_state)
     model.fit(X)
     return model
 
-
 def _downsample(arr: np.ndarray, max_pts: int = 200) -> List[float]:
-    """Downsample a curve array to at most max_pts points for JSON transfer."""
     step = max(1, len(arr) // max_pts)
     return [round(float(v), 5) for v in arr[::step]]
-
 
 def _compute_metrics(
     y_true,
@@ -130,7 +118,6 @@ def _compute_metrics(
     y_proba: Optional[np.ndarray] = None,
     split_name: str = "",
 ) -> Tuple[Dict[str, Any], str]:
-    """Compute full metrics including ROC/PR curves when probabilities available."""
     report_text = classification_report(y_true, y_pred, digits=4, zero_division=0)
     try:
         tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[0, 1]).ravel()
@@ -155,13 +142,11 @@ def _compute_metrics(
         "accuracy": accuracy,
         "mcc": mcc,
         "tp": float(tp), "tn": float(tn), "fp": float(fp), "fn": float(fn),
-        # class balance in this split
         "n_positive": int(np.sum(y_true == 1)),
         "n_negative": int(np.sum(y_true == 0)),
         "n_total":    int(len(y_true)),
     }
 
-    # ── Curve metrics (only when probabilities are available) ────────────────
     if y_proba is not None and len(np.unique(y_true)) > 1:
         try:
             roc_fpr, roc_tpr, roc_thresh = roc_curve(y_true, y_proba)
@@ -179,7 +164,6 @@ def _compute_metrics(
                 "precision": _downsample(pr_prec),
                 "recall":    _downsample(pr_rec),
             }
-            # Threshold analysis: metrics at 10 evenly-spaced probability thresholds
             thresholds = np.linspace(0.1, 0.9, 9)
             thresh_rows = []
             for thr in thresholds:
@@ -202,15 +186,13 @@ def _compute_metrics(
                 })
             metrics["threshold_analysis"] = thresh_rows
         except Exception:
-            pass  # curves are bonus data — never fail the whole training
+            pass
 
     return metrics, report_text
-
 
 def _get_feature_importance(
     model: Any, feature_cols: List[str], top_n: int = 20
 ) -> Optional[Dict[str, List]]:
-    """Extract feature importances from tree-based models."""
     importances = None
     if hasattr(model, "feature_importances_"):
         importances = model.feature_importances_
@@ -226,13 +208,11 @@ def _get_feature_importance(
         "importances": [round(float(importances[i]), 5) for i in indices],
     }
 
-
 def train_and_evaluate(
     df: pd.DataFrame,
     feature_cols: list,
     label_col: str = "label",
 ) -> Tuple[Any, Dict[str, float], str]:
-    """Train on all data and return train metrics. Kept for backwards compatibility."""
     df = df.dropna(subset=[label_col])
     X = df[feature_cols]
     y = df[label_col]
@@ -240,7 +220,6 @@ def train_and_evaluate(
     y_pred = model.predict(X)
     metrics, report_text = _compute_metrics(y, y_pred)
     return model, metrics, report_text
-
 
 def train_and_evaluate_with_split(
     df: pd.DataFrame,
@@ -251,12 +230,6 @@ def train_and_evaluate_with_split(
     random_state: int = 42,
     model_type: str = "rf",
 ) -> Tuple[Any, Dict[str, Any], Dict[str, Any], Dict[str, Any], str]:
-    """
-    Train/validation/test split, train on train, evaluate on all splits.
-    Returns extended metrics including ROC/PR curves, feature importance, CV scores.
-    model_type: 'rf' | 'xgboost' | 'lgbm' | 'svm' | 'mlp' | 'isolation_forest'
-    Returns: (model, train_metrics, val_metrics, test_metrics, report_text).
-    """
     df = df.dropna(subset=[label_col])
     if len(df) < 10:
         raise ValueError("Not enough labeled rows for train/val/test split (need at least 10).")
@@ -276,7 +249,6 @@ def train_and_evaluate_with_split(
         X_temp, y_temp, test_size=(1 - val_ratio), random_state=random_state, stratify=stratify_temp
     )
 
-    # ── Train with timing ────────────────────────────────────────────────────
     t0 = time.perf_counter()
     if model_type == "xgboost":
         model = train_xgb_classifier(X_train, y_train, random_state=random_state)
@@ -292,7 +264,6 @@ def train_and_evaluate_with_split(
         model = train_rf_classifier(X_train, y_train, random_state=random_state)
     train_time = round(time.perf_counter() - t0, 3)
 
-    # ── Probabilities for curves ─────────────────────────────────────────────
     def _proba(X_arr):
         if hasattr(model, "predict_proba"):
             try:
@@ -305,14 +276,11 @@ def train_and_evaluate_with_split(
     val_metrics,   _ = _compute_metrics(y_val,   model.predict(X_val),   _proba(X_val),   "Val")
     test_metrics, report_text = _compute_metrics(y_test, model.predict(X_test), _proba(X_test), "Test")
 
-    # ── Training metadata ────────────────────────────────────────────────────
     train_metrics["train_time_s"] = train_time
     train_metrics["n_features"]   = len(feature_names)
     train_metrics["n_train"]      = int(len(X_train))
     train_metrics["model_type"]   = model_type
 
-    # ── Cross-validation (5-fold on training data, F1 + AUC) ────────────────
-    # Only run when dataset is large enough and model supports probabilities
     if len(X_train) >= 50 and model_type not in ("isolation_forest",):
         try:
             cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=random_state)
@@ -328,21 +296,18 @@ def train_and_evaluate_with_split(
                 "folds":          5,
             }
         except Exception:
-            pass  # CV is bonus — never block training
+            pass
 
-    # ── Feature importance ───────────────────────────────────────────────────
     fi = _get_feature_importance(model, feature_names)
     if fi:
         train_metrics["feature_importance"] = fi
 
     return model, train_metrics, val_metrics, test_metrics, report_text
 
-
 def save_model(model: Any, path: str) -> None:
     out_path = Path(path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     joblib.dump(model, out_path)
-
 
 def load_model(path: str) -> Any:
     return joblib.load(path)

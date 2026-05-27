@@ -2,7 +2,6 @@ from functools import lru_cache
 
 from pydantic_settings import BaseSettings
 
-
 class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///./crosslayer.db"
 
@@ -24,7 +23,7 @@ class Settings(BaseSettings):
     GEMINI_MODEL: str = "gemini-1.5-flash"
 
     OPENAI_API_KEY: str = ""
-    OPENAI_MODEL: str = "gpt-4o-mini"   
+    OPENAI_MODEL: str = "gpt-4o-mini"
 
     MODEL_DIR: str = "models"
     BGL_MODEL_PATH: str = "models/bgl_model.pkl"
@@ -44,7 +43,6 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
-
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

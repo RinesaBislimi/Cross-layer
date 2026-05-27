@@ -1,6 +1,6 @@
 <div class="alert-rules-page">
 
-  <!-- Header -->
+
   <div class="page-header">
     <div>
       <h1>Alert Rules</h1>
@@ -9,30 +9,30 @@
     <button class="btn-primary" (click)="openForm()">+ New Rule</button>
   </div>
 
-  <!-- Notice banner -->
+
   <div class="notice-banner">
     <span class="notice-icon">ℹ</span>
     <span>Rules are stored in the database and evaluated server-side every time new incidents are generated. Email alerts fire automatically — no browser needed.</span>
   </div>
 
-  <!-- Load error -->
+
   <div *ngIf="loadError" class="form-error" style="margin:0">
     <span>⚠ {{ loadError }}</span>
     <button class="btn-secondary" style="margin-left:1rem;padding:0.25rem 0.75rem;font-size:0.75rem" (click)="loadRules()">Retry</button>
   </div>
 
-  <!-- Add form -->
+
   <div *ngIf="showForm" class="card form-card">
     <h2 class="form-title">New Alert Rule</h2>
 
-    <!-- Error -->
+
     <div *ngIf="formError" class="form-error">
       <span>⚠ {{ formError }}</span>
     </div>
 
     <div class="form-grid">
 
-      <!-- Rule name -->
+
       <div class="form-group form-group-full">
         <label class="form-label" for="rule-name">Rule name <span class="required">*</span></label>
         <input
@@ -44,7 +44,7 @@
         />
       </div>
 
-      <!-- Condition -->
+
       <div class="form-group">
         <label class="form-label" for="rule-cond">Condition <span class="required">*</span></label>
         <select id="rule-cond" class="form-select" [(ngModel)]="newRule.condition">
@@ -52,7 +52,7 @@
         </select>
       </div>
 
-      <!-- Layer -->
+
       <div class="form-group">
         <label class="form-label" for="rule-layer">Layer</label>
         <select id="rule-layer" class="form-select" [(ngModel)]="newRule.layer">
@@ -60,7 +60,7 @@
         </select>
       </div>
 
-      <!-- Notification method -->
+
       <div class="form-group">
         <label class="form-label" for="rule-method">Notification method <span class="required">*</span></label>
         <select id="rule-method" class="form-select" [(ngModel)]="newRule.notifyMethod">
@@ -68,7 +68,7 @@
         </select>
       </div>
 
-      <!-- Target (webhook/email) -->
+
       <div class="form-group" *ngIf="needsTarget(newRule.notifyMethod)">
         <label class="form-label" for="rule-target">
           {{ newRule.notifyMethod === 'webhook' ? 'Webhook URL' : 'Email address' }}
@@ -91,12 +91,12 @@
     </div>
   </div>
 
-  <!-- Rules list -->
+
   <div *ngIf="rules.length > 0" class="rules-list">
     <div *ngFor="let rule of rules" class="rule-card card" [class.rule-disabled]="!rule.enabled">
 
       <div class="rule-top">
-        <!-- Name + enabled toggle -->
+
         <div class="rule-name-row">
           <span class="rule-name">{{ rule.name }}</span>
           <label class="toggle-wrap" [title]="rule.enabled ? 'Disable rule' : 'Enable rule'">
@@ -110,11 +110,11 @@
           </label>
         </div>
 
-        <!-- Delete -->
+
         <button class="btn-delete" (click)="deleteRule(rule.id)" title="Delete rule">✕</button>
       </div>
 
-      <!-- Condition badge -->
+
       <div class="rule-meta">
         <span class="cond-badge" [class]="conditionBadgeClass(rule.condition)">
           {{ conditionLabel(rule.condition) }}
@@ -122,7 +122,7 @@
         <span class="layer-chip">{{ layerLabel(rule.layer) }}</span>
       </div>
 
-      <!-- Notify + stats row -->
+
       <div class="rule-bottom">
         <span class="notify-method">
           <span class="notify-icon">
@@ -140,7 +140,7 @@
         </div>
       </div>
 
-      <!-- Test row -->
+
       <div class="rule-test-row">
         <button class="btn-test" (click)="testRule(rule)" [disabled]="!rule.enabled">
           ▶ Test now
@@ -156,7 +156,7 @@
     </div>
   </div>
 
-  <!-- Empty state -->
+
   <div *ngIf="rules.length === 0 && !showForm && !loading && !loadError" class="empty-state card">
     <span class="empty-icon">🔕</span>
     <h3>No alert rules yet</h3>
@@ -164,7 +164,7 @@
     <button class="btn-primary" (click)="openForm()">+ Create First Rule</button>
   </div>
 
-  <!-- Loading state -->
+
   <div *ngIf="loading" class="empty-state card">
     <p style="color:var(--text-muted)">Loading rules…</p>
   </div>

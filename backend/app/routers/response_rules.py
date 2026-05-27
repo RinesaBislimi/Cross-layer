@@ -1,4 +1,3 @@
-"""CRUD REST endpoints for automated response / playbook rules."""
 
 import logging
 from datetime import datetime
@@ -14,9 +13,6 @@ from ..models.response_rule import ResponseRule
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/response-rules", tags=["response-rules"])
 
-
-# ── Pydantic schemas ──────────────────────────────────────────────────────────
-
 class ResponseRuleCreate(BaseModel):
     name:           str
     description:    str  = ""
@@ -25,7 +21,6 @@ class ResponseRuleCreate(BaseModel):
     action_type:    str
     action_target:  str  = ""
     action_payload: str  = "{}"
-
 
 class ResponseRuleOut(BaseModel):
     id:             int
@@ -44,14 +39,12 @@ class ResponseRuleOut(BaseModel):
     class Config:
         from_attributes = True
 
-
 VALID_CONDITIONS = {
     "any_anomaly", "critical_severity", "high_severity", "cross_layer", "entity_repeat"
 }
 VALID_ACTIONS = {
     "block_ip", "isolate_host", "webhook", "create_ticket", "email_team"
 }
-
 
 def _to_out(r: ResponseRule) -> dict:
     return {
@@ -69,14 +62,10 @@ def _to_out(r: ResponseRule) -> dict:
         "last_fired_at":  r.last_fired_at.isoformat() if r.last_fired_at else None,
     }
 
-
-# ── Endpoints ─────────────────────────────────────────────────────────────────
-
 @router.get("/")
 def list_rules(db: Session = Depends(get_db)):
     rules = db.query(ResponseRule).order_by(ResponseRule.id.desc()).all()
     return [_to_out(r) for r in rules]
-
 
 @router.post("/", status_code=201)
 def create_rule(payload: ResponseRuleCreate, db: Session = Depends(get_db)):
@@ -89,7 +78,6 @@ def create_rule(payload: ResponseRuleCreate, db: Session = Depends(get_db)):
     if payload.action_type in ("webhook", "email_team") and not payload.action_target.strip():
         raise HTTPException(status_code=422, detail="action_target is required for webhook and email_team actions.")
 
-    # Validate JSON payload
     import json
     try:
         json.loads(payload.action_payload or "{}")
@@ -114,7 +102,6 @@ def create_rule(payload: ResponseRuleCreate, db: Session = Depends(get_db)):
     logger.info("Response rule created: id=%s name=%r action=%s", rule.id, rule.name, rule.action_type)
     return _to_out(rule)
 
-
 @router.delete("/{rule_id}", status_code=204)
 def delete_rule(rule_id: int, db: Session = Depends(get_db)):
     rule = db.query(ResponseRule).filter(ResponseRule.id == rule_id).first()
@@ -122,7 +109,6 @@ def delete_rule(rule_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Rule not found.")
     db.delete(rule)
     db.commit()
-
 
 @router.patch("/{rule_id}/toggle")
 def toggle_rule(rule_id: int, db: Session = Depends(get_db)):
@@ -134,10 +120,8 @@ def toggle_rule(rule_id: int, db: Session = Depends(get_db)):
     db.refresh(rule)
     return _to_out(rule)
 
-
 @router.post("/test/{rule_id}")
 def test_rule(rule_id: int, limit: int = 50, db: Session = Depends(get_db)):
-    """Test a response rule against recent incidents (dry run — does NOT fire actions)."""
     from ..models.incidents import Incident
     from ..services.response_service import _rule_matches
 
