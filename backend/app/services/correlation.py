@@ -7,6 +7,23 @@ from sqlalchemy.orm import Session
 
 from ..models import Incident, LogEvent
 
+# Algorithm 1 layer index: multi-stage incidents progress from the outside in.
+LAYER_ORDER = {"network": 0, "system": 1, "application": 2}
+
+def apply_layer_order(events: List[LogEvent]) -> List[LogEvent]:
+    """Keep the time-sorted sub-sequence whose layer index is non-decreasing
+    (network -> system -> application). Events of unknown layers are neutral."""
+    kept: List[LogEvent] = []
+    last = -1
+    for e in events:
+        lo = LAYER_ORDER.get(e.layer)
+        if lo is None:
+            kept.append(e)
+        elif lo >= last:
+            kept.append(e)
+            last = lo
+    return kept
+
 def _generate_incidents_time_cooccurrence(
     db: Session,
     *,
@@ -340,6 +357,7 @@ def generate_cross_layer_incidents(
     sliding_window: bool = True,
     correlation_mode: str = "entity",
     max_events_per_incident: int = 2000,
+    enforce_layer_order: bool = True,
 ) -> Dict[str, Any]:
     logger = logging.getLogger(__name__)
 
@@ -509,6 +527,8 @@ def generate_cross_layer_incidents(
         nonlocal created, skipped
         if not bucket:
             return
+        if enforce_layer_order:
+            bucket = apply_layer_order(bucket)   # Algorithm 1, line 4
         layers = sorted({e.layer for e in bucket if e.layer})
         if len(layers) < min_layers:
             return
@@ -579,6 +599,7 @@ def generate_cross_layer_incidents(
             "severity_score": severity_score,
             "duration_minutes": duration_minutes,
             "sliding_window": sliding_window,
+            "layer_order_enforced": enforce_layer_order,
         }
         if pattern:
             attrs["correlation_pattern"] = pattern

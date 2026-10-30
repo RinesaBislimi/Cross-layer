@@ -186,6 +186,7 @@ def api_generate_incidents(
     sliding_window: bool = True,
     correlation_mode: str = "time_cooccurrence",
     max_events_per_incident: int = 2000,
+    enforce_layer_order: bool = True,
     db: Session = Depends(get_db),
 ) -> dict:
     if correlation_mode not in ("entity", "time_cooccurrence"):
@@ -221,6 +222,7 @@ def api_generate_incidents(
             sliding_window=sliding_window,
             correlation_mode=correlation_mode,
             max_events_per_incident=max_events_per_incident,
+            enforce_layer_order=enforce_layer_order,
         )
         logger.info("Generated incidents: %s", result)
 

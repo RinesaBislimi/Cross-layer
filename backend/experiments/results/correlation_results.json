@@ -1,0 +1,127 @@
+{
+  "main": {
+    "window_s": 60,
+    "alerts_before": 12600,
+    "planted_incidents": 200,
+    "distractor_alerts": 12000,
+    "incidents_after": 263,
+    "reduction_ratio": 0.9791,
+    "tp": 199,
+    "fp": 64,
+    "fn": 1,
+    "incident_precision": 0.7567,
+    "incident_recall": 0.995,
+    "incident_f1": 0.8596
+  },
+  "window_sensitivity": [
+    {
+      "window_s": 5,
+      "incidents_after": 125,
+      "reduction_ratio": 0.9901,
+      "tp": 119,
+      "fp": 6,
+      "fn": 81,
+      "incident_precision": 0.952,
+      "incident_recall": 0.595,
+      "incident_f1": 0.7323
+    },
+    {
+      "window_s": 15,
+      "incidents_after": 213,
+      "reduction_ratio": 0.9831,
+      "tp": 198,
+      "fp": 15,
+      "fn": 2,
+      "incident_precision": 0.9296,
+      "incident_recall": 0.99,
+      "incident_f1": 0.9588
+    },
+    {
+      "window_s": 30,
+      "incidents_after": 232,
+      "reduction_ratio": 0.9816,
+      "tp": 200,
+      "fp": 32,
+      "fn": 0,
+      "incident_precision": 0.8621,
+      "incident_recall": 1.0,
+      "incident_f1": 0.9259
+    },
+    {
+      "window_s": 60,
+      "incidents_after": 263,
+      "reduction_ratio": 0.9791,
+      "tp": 199,
+      "fp": 64,
+      "fn": 1,
+      "incident_precision": 0.7567,
+      "incident_recall": 0.995,
+      "incident_f1": 0.8596
+    },
+    {
+      "window_s": 120,
+      "incidents_after": 340,
+      "reduction_ratio": 0.973,
+      "tp": 197,
+      "fp": 143,
+      "fn": 3,
+      "incident_precision": 0.5794,
+      "incident_recall": 0.985,
+      "incident_f1": 0.7296
+    },
+    {
+      "window_s": 300,
+      "incidents_after": 574,
+      "reduction_ratio": 0.9544,
+      "tp": 196,
+      "fp": 378,
+      "fn": 4,
+      "incident_precision": 0.3415,
+      "incident_recall": 0.98,
+      "incident_f1": 0.5065
+    },
+    {
+      "window_s": 600,
+      "incidents_after": 874,
+      "reduction_ratio": 0.9306,
+      "tp": 185,
+      "fp": 689,
+      "fn": 15,
+      "incident_precision": 0.2117,
+      "incident_recall": 0.925,
+      "incident_f1": 0.3445
+    }
+  ],
+  "ablation_layer_order": {
+    "with_order": {
+      "tp": 199,
+      "fp": 64,
+      "fn": 1,
+      "incident_precision": 0.7567,
+      "incident_recall": 0.995,
+      "incident_f1": 0.8596
+    },
+    "without_order": {
+      "tp": 200,
+      "fp": 144,
+      "fn": 0,
+      "incident_precision": 0.5814,
+      "incident_recall": 1.0,
+      "incident_f1": 0.7353
+    }
+  },
+  "across_seeds": {
+    "incident_precision": {
+      "mean": 0.7282,
+      "std": 0.0145
+    },
+    "incident_recall": {
+      "mean": 0.995,
+      "std": 0.0032
+    },
+    "incident_f1": {
+      "mean": 0.8408,
+      "std": 0.0096
+    }
+  }
+}

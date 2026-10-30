@@ -1,0 +1,64 @@
+{
+  "layers": [
+    {
+      "layer": "network",
+      "dataset": "CICIDS2017",
+      "n_test": 44952,
+      "batch_events_per_s": 464288.6,
+      "latency_ms_mean": 32.628,
+      "latency_ms_p99": 47.7365
+    },
+    {
+      "layer": "system",
+      "dataset": "BGL",
+      "n_test": 44907,
+      "batch_events_per_s": 718459.1,
+      "latency_ms_mean": 32.7435,
+      "latency_ms_p99": 47.9453
+    },
+    {
+      "layer": "application",
+      "dataset": "TDA",
+      "n_test": 24076,
+      "batch_events_per_s": 515647.6,
+      "latency_ms_mean": 32.5669,
+      "latency_ms_p99": 48.028
+    }
+  ],
+  "correlation": {
+    "scaling": [
+      {
+        "n_events": 2150,
+        "seconds": 0.0217,
+        "events_per_s": 99232.0
+      },
+      {
+        "n_events": 8240,
+        "seconds": 0.0677,
+        "events_per_s": 121768.8
+      },
+      {
+        "n_events": 20600,
+        "seconds": 0.1446,
+        "events_per_s": 142495.6
+      },
+      {
+        "n_events": 51500,
+        "seconds": 0.3324,
+        "events_per_s": 154945.3
+      },
+      {
+        "n_events": 103000,
+        "seconds": 0.7168,
+        "events_per_s": 143686.6
+      }
+    ],
+    "empirical_exponent": 0.892
+  },
+  "host": {
+    "peak_python_mem_mb": 398.9,
+    "rss_start_mb": 137.5,
+    "rss_end_mb": 157.8,
+    "psutil_available": true
+  }
+}

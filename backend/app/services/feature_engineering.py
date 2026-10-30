@@ -178,8 +178,13 @@ def build_tda_features(db: Session, limit: int = _TDA_TRAIN_LIMIT) -> pd.DataFra
         df["label"] = df["_db_label"]
         logger.info("TDA: using %d DB anomaly labels", int(df["label"].sum()))
     else:
+        # TDA has no verified ground truth: generate synthetic (pseudo) labels
+        # with Isolation Forest (contamination=0.05), exactly as described in the
+        # manuscript. Supervised metrics obtained against these labels therefore
+        # measure agreement with the pseudo-labeller, not independently verified
+        # anomaly-detection accuracy (see the paper's threats to validity).
         logger.info("TDA: no labels — running IsolationForest for synthetic labels (%d rows)", len(df))
-        iso = IsolationForest(n_estimators=50, contamination=0.05, random_state=42, n_jobs=-1)
+        iso = IsolationForest(n_estimators=100, contamination=0.05, random_state=42, n_jobs=-1)
         iso_pred = iso.fit_predict(X)
         df["label"] = (iso_pred == -1).astype(int)
         logger.info(
