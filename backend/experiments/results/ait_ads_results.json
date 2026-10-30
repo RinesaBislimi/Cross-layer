@@ -1,0 +1,1910 @@
+{
+  "scenarios": {
+    "fox": {
+      "scenario": "fox",
+      "alerts": 473104,
+      "attack_alerts": 421653,
+      "alerts_per_layer": {
+        "system": 1658,
+        "network": 22700,
+        "application": 448746
+      },
+      "attack_alerts_per_layer": {
+        "system": 57,
+        "application": 420903,
+        "network": 693
+      },
+      "alerts_per_ids": {
+        "aminer": 10581,
+        "wazuh": 440355,
+        "suricata": 22168
+      },
+      "attack_phases": [
+        "cracking",
+        "dirb",
+        "dnsteal",
+        "network_scans",
+        "privilege_escalation",
+        "reverse_shell",
+        "service_scans",
+        "service_stop",
+        "webshell",
+        "wpscan"
+      ],
+      "attacker_ip": "172.17.130.196",
+      "windows": {
+        "W=30": {
+          "layer_order_enforced": false,
+          "incidents_after": 174,
+          "reduction_ratio": 0.9996,
+          "true_incidents": 5,
+          "false_correlations": 169,
+          "incident_precision": 0.0287,
+          "attack_alert_recall": 0.9965,
+          "best_attack_incident": {
+            "entity": "ip:172.17.130.196",
+            "n": 419960,
+            "layers": [
+              "application",
+              "network",
+              "system"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "dirb",
+              "service_scans",
+              "wpscan"
+            ],
+            "start": "2022-01-18T12:17:15"
+          },
+          "max_layers_in_attack_incident": 3,
+          "max_phases_in_attack_incident": 3,
+          "attack_incidents_multilayer": 5
+        },
+        "W=30,order": {
+          "layer_order_enforced": true,
+          "incidents_after": 106,
+          "reduction_ratio": 0.9998,
+          "true_incidents": 2,
+          "false_correlations": 104,
+          "incident_precision": 0.0189,
+          "attack_alert_recall": 0.0001,
+          "best_attack_incident": {
+            "entity": "ip:192.168.128.195",
+            "n": 16,
+            "layers": [
+              "application",
+              "system"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "cracking"
+            ],
+            "start": "2022-01-18T12:53:18"
+          },
+          "max_layers_in_attack_incident": 2,
+          "max_phases_in_attack_incident": 1,
+          "attack_incidents_multilayer": 2
+        },
+        "W=60": {
+          "layer_order_enforced": false,
+          "incidents_after": 204,
+          "reduction_ratio": 0.9996,
+          "true_incidents": 5,
+          "false_correlations": 199,
+          "incident_precision": 0.0245,
+          "attack_alert_recall": 0.9966,
+          "best_attack_incident": {
+            "entity": "ip:172.17.130.196",
+            "n": 419963,
+            "layers": [
+              "application",
+              "network",
+              "system"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "cracking",
+              "dirb",
+              "service_scans",
+              "webshell",
+              "wpscan"
+            ],
+            "start": "2022-01-18T12:17:15"
+          },
+          "max_layers_in_attack_incident": 3,
+          "max_phases_in_attack_incident": 5,
+          "attack_incidents_multilayer": 5
+        },
+        "W=60,order": {
+          "layer_order_enforced": true,
+          "incidents_after": 110,
+          "reduction_ratio": 0.9998,
+          "true_incidents": 2,
+          "false_correlations": 108,
+          "incident_precision": 0.0182,
+          "attack_alert_recall": 0.0001,
+          "best_attack_incident": {
+            "entity": "ip:192.168.128.170",
+            "n": 25,
+            "layers": [
+              "application",
+              "system"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "dnsteal"
+            ],
+            "start": "2022-01-17T09:25:24"
+          },
+          "max_layers_in_attack_incident": 2,
+          "max_phases_in_attack_incident": 1,
+          "attack_incidents_multilayer": 2
+        },
+        "W=300": {
+          "layer_order_enforced": false,
+          "incidents_after": 216,
+          "reduction_ratio": 0.9995,
+          "true_incidents": 11,
+          "false_correlations": 205,
+          "incident_precision": 0.0509,
+          "attack_alert_recall": 0.998,
+          "best_attack_incident": {
+            "entity": "ip:172.17.130.196",
+            "n": 420043,
+            "layers": [
+              "application",
+              "network",
+              "system"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "cracking",
+              "dirb",
+              "service_scans",
+              "webshell",
+              "wpscan"
+            ],
+            "start": "2022-01-18T12:17:15"
+          },
+          "max_layers_in_attack_incident": 3,
+          "max_phases_in_attack_incident": 5,
+          "attack_incidents_multilayer": 11
+        },
+        "W=300,order": {
+          "layer_order_enforced": true,
+          "incidents_after": 76,
+          "reduction_ratio": 0.9998,
+          "true_incidents": 6,
+          "false_correlations": 70,
+          "incident_precision": 0.0789,
+          "attack_alert_recall": 0.0008,
+          "best_attack_incident": {
+            "entity": "ip:192.168.129.212",
+            "n": 34,
+            "layers": [
+              "application",
+              "system"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "cracking",
+              "dirb"
+            ],
+            "start": "2022-01-18T12:25:45"
+          },
+          "max_layers_in_attack_incident": 2,
+          "max_phases_in_attack_incident": 2,
+          "attack_incidents_multilayer": 6
+        }
+      }
+    },
+    "harrison": {
+      "scenario": "harrison",
+      "alerts": 593948,
+      "attack_alerts": 431492,
+      "alerts_per_layer": {
+        "system": 1342,
+        "network": 135006,
+        "application": 457600
+      },
+      "attack_alerts_per_layer": {
+        "application": 426892,
+        "network": 4504,
+        "system": 96
+      },
+      "alerts_per_ids": {
+        "aminer": 10194,
+        "suricata": 134795,
+        "wazuh": 448959
+      },
+      "attack_phases": [
+        "cracking",
+        "dirb",
+        "dnsteal",
+        "network_scans",
+        "privilege_escalation",
+        "reverse_shell",
+        "service_scans",
+        "service_stop",
+        "webshell",
+        "wpscan"
+      ],
+      "attacker_ip": "10.237.1.238",
+      "windows": {
+        "W=30": {
+          "layer_order_enforced": false,
+          "incidents_after": 732,
+          "reduction_ratio": 0.9988,
+          "true_incidents": 56,
+          "false_correlations": 676,
+          "incident_precision": 0.0765,
+          "attack_alert_recall": 0.9876,
+          "best_attack_incident": {
+            "entity": "ip:10.237.2.255",
+            "n": 80,
+            "layers": [
+              "application",
+              "network"
+            ],
+            "attack_fraction": 0.575,
+            "phases": [
+              "cracking",
+              "privilege_escalation",
+              "reverse_shell"
+            ],
+            "start": "2022-02-08T08:34:37"
+          },
+          "max_layers_in_attack_incident": 3,
+          "max_phases_in_attack_incident": 3,
+          "attack_incidents_multilayer": 56
+        },
+        "W=30,order": {
+          "layer_order_enforced": true,
+          "incidents_after": 264,
+          "reduction_ratio": 0.9996,
+          "true_incidents": 20,
+          "false_correlations": 244,
+          "incident_precision": 0.0758,
+          "attack_alert_recall": 0.0009,
+          "best_attack_incident": {
+            "entity": "ip:10.237.2.255",
+            "n": 44,
+            "layers": [
+              "application",
+              "network"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "cracking",
+              "dirb",
+              "webshell"
+            ],
+            "start": "2022-02-08T07:54:32.835750"
+          },
+          "max_layers_in_attack_incident": 2,
+          "max_phases_in_attack_incident": 3,
+          "attack_incidents_multilayer": 20
+        },
+        "W=60": {
+          "layer_order_enforced": false,
+          "incidents_after": 626,
+          "reduction_ratio": 0.9989,
+          "true_incidents": 43,
+          "false_correlations": 583,
+          "incident_precision": 0.0687,
+          "attack_alert_recall": 0.9881,
+          "best_attack_incident": {
+            "entity": "ip:10.237.1.238",
+            "n": 424868,
+            "layers": [
+              "application",
+              "network"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "cracking",
+              "dirb",
+              "webshell",
+              "wpscan"
+            ],
+            "start": "2022-02-08T07:28:41"
+          },
+          "max_layers_in_attack_incident": 3,
+          "max_phases_in_attack_incident": 4,
+          "attack_incidents_multilayer": 43
+        },
+        "W=60,order": {
+          "layer_order_enforced": true,
+          "incidents_after": 237,
+          "reduction_ratio": 0.9996,
+          "true_incidents": 14,
+          "false_correlations": 223,
+          "incident_precision": 0.0591,
+          "attack_alert_recall": 0.0007,
+          "best_attack_incident": {
+            "entity": "ip:10.237.2.255",
+            "n": 44,
+            "layers": [
+              "application",
+              "network"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "cracking",
+              "dirb",
+              "webshell"
+            ],
+            "start": "2022-02-08T07:54:32.835750"
+          },
+          "max_layers_in_attack_incident": 2,
+          "max_phases_in_attack_incident": 3,
+          "attack_incidents_multilayer": 14
+        },
+        "W=300": {
+          "layer_order_enforced": false,
+          "incidents_after": 235,
+          "reduction_ratio": 0.9996,
+          "true_incidents": 16,
+          "false_correlations": 219,
+          "incident_precision": 0.0681,
+          "attack_alert_recall": 0.9907,
+          "best_attack_incident": {
+            "entity": "ip:10.237.2.255",
+            "n": 907,
+            "layers": [
+              "application",
+              "network",
+              "system"
+            ],
+            "attack_fraction": 0.61,
+            "phases": [
+              "cracking",
+              "dirb",
+              "dnsteal",
+              "privilege_escalation",
+              "reverse_shell",
+              "webshell"
+            ],
+            "start": "2022-02-08T07:52:50"
+          },
+          "max_layers_in_attack_incident": 3,
+          "max_phases_in_attack_incident": 6,
+          "attack_incidents_multilayer": 16
+        },
+        "W=300,order": {
+          "layer_order_enforced": true,
+          "incidents_after": 128,
+          "reduction_ratio": 0.9998,
+          "true_incidents": 7,
+          "false_correlations": 121,
+          "incident_precision": 0.0547,
+          "attack_alert_recall": 0.9851,
+          "best_attack_incident": {
+            "entity": "ip:10.237.1.238",
+            "n": 424872,
+            "layers": [
+              "application",
+              "network"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "cracking",
+              "dirb",
+              "service_scans",
+              "webshell",
+              "wpscan"
+            ],
+            "start": "2022-02-08T07:23:50.740481"
+          },
+          "max_layers_in_attack_incident": 2,
+          "max_phases_in_attack_incident": 5,
+          "attack_incidents_multilayer": 7
+        }
+      }
+    },
+    "russellmitchell": {
+      "scenario": "russellmitchell",
+      "alerts": 45544,
+      "attack_alerts": 12015,
+      "alerts_per_layer": {
+        "system": 1061,
+        "network": 18520,
+        "application": 25963
+      },
+      "attack_alerts_per_layer": {
+        "system": 70,
+        "application": 11517,
+        "network": 428
+      },
+      "alerts_per_ids": {
+        "aminer": 4056,
+        "wazuh": 23116,
+        "suricata": 18372
+      },
+      "attack_phases": [
+        "cracking",
+        "dirb",
+        "dnsteal",
+        "network_scans",
+        "privilege_escalation",
+        "reverse_shell",
+        "service_scans",
+        "service_stop",
+        "webshell",
+        "wpscan"
+      ],
+      "attacker_ip": "172.19.131.174",
+      "windows": {
+        "W=30": {
+          "layer_order_enforced": false,
+          "incidents_after": 305,
+          "reduction_ratio": 0.9933,
+          "true_incidents": 17,
+          "false_correlations": 288,
+          "incident_precision": 0.0557,
+          "attack_alert_recall": 0.9551,
+          "best_attack_incident": {
+            "entity": "ip:172.19.131.174",
+            "n": 11022,
+            "layers": [
+              "application",
+              "network",
+              "system"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "dirb",
+              "service_scans",
+              "wpscan"
+            ],
+            "start": "2022-01-24T03:56:47"
+          },
+          "max_layers_in_attack_incident": 3,
+          "max_phases_in_attack_incident": 3,
+          "attack_incidents_multilayer": 17
+        },
+        "W=30,order": {
+          "layer_order_enforced": true,
+          "incidents_after": 101,
+          "reduction_ratio": 0.9978,
+          "true_incidents": 7,
+          "false_correlations": 94,
+          "incident_precision": 0.0693,
+          "attack_alert_recall": 0.9326,
+          "best_attack_incident": {
+            "entity": "ip:172.19.131.174",
+            "n": 10969,
+            "layers": [
+              "application",
+              "system"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "dirb",
+              "service_scans",
+              "wpscan"
+            ],
+            "start": "2022-01-24T03:56:47"
+          },
+          "max_layers_in_attack_incident": 2,
+          "max_phases_in_attack_incident": 3,
+          "attack_incidents_multilayer": 7
+        },
+        "W=60": {
+          "layer_order_enforced": false,
+          "incidents_after": 300,
+          "reduction_ratio": 0.9934,
+          "true_incidents": 16,
+          "false_correlations": 284,
+          "incident_precision": 0.0533,
+          "attack_alert_recall": 0.9631,
+          "best_attack_incident": {
+            "entity": "ip:172.19.131.174",
+            "n": 11022,
+            "layers": [
+              "application",
+              "network",
+              "system"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "dirb",
+              "service_scans",
+              "wpscan"
+            ],
+            "start": "2022-01-24T03:56:47"
+          },
+          "max_layers_in_attack_incident": 3,
+          "max_phases_in_attack_incident": 3,
+          "attack_incidents_multilayer": 16
+        },
+        "W=60,order": {
+          "layer_order_enforced": true,
+          "incidents_after": 103,
+          "reduction_ratio": 0.9977,
+          "true_incidents": 8,
+          "false_correlations": 95,
+          "incident_precision": 0.0777,
+          "attack_alert_recall": 0.9358,
+          "best_attack_incident": {
+            "entity": "ip:172.19.131.174",
+            "n": 10969,
+            "layers": [
+              "application",
+              "system"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "dirb",
+              "service_scans",
+              "wpscan"
+            ],
+            "start": "2022-01-24T03:56:47"
+          },
+          "max_layers_in_attack_incident": 2,
+          "max_phases_in_attack_incident": 3,
+          "attack_incidents_multilayer": 8
+        },
+        "W=300": {
+          "layer_order_enforced": false,
+          "incidents_after": 179,
+          "reduction_ratio": 0.9961,
+          "true_incidents": 5,
+          "false_correlations": 174,
+          "incident_precision": 0.0279,
+          "attack_alert_recall": 0.9685,
+          "best_attack_incident": {
+            "entity": "ip:172.19.131.174",
+            "n": 11025,
+            "layers": [
+              "application",
+              "network",
+              "system"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "cracking",
+              "dirb",
+              "service_scans",
+              "webshell",
+              "wpscan"
+            ],
+            "start": "2022-01-24T03:56:47"
+          },
+          "max_layers_in_attack_incident": 3,
+          "max_phases_in_attack_incident": 5,
+          "attack_incidents_multilayer": 5
+        },
+        "W=300,order": {
+          "layer_order_enforced": true,
+          "incidents_after": 71,
+          "reduction_ratio": 0.9984,
+          "true_incidents": 4,
+          "false_correlations": 67,
+          "incident_precision": 0.0563,
+          "attack_alert_recall": 0.9471,
+          "best_attack_incident": {
+            "entity": "ip:172.19.131.174",
+            "n": 10972,
+            "layers": [
+              "application",
+              "system"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "cracking",
+              "dirb",
+              "service_scans",
+              "webshell",
+              "wpscan"
+            ],
+            "start": "2022-01-24T03:56:47"
+          },
+          "max_layers_in_attack_incident": 2,
+          "max_phases_in_attack_incident": 5,
+          "attack_incidents_multilayer": 4
+        }
+      }
+    },
+    "santos": {
+      "scenario": "santos",
+      "alerts": 130779,
+      "attack_alerts": 13004,
+      "alerts_per_layer": {
+        "system": 1082,
+        "network": 88547,
+        "application": 41150
+      },
+      "attack_alerts_per_layer": {
+        "application": 12090,
+        "system": 82,
+        "network": 832
+      },
+      "alerts_per_ids": {
+        "aminer": 4266,
+        "suricata": 88224,
+        "wazuh": 38289
+      },
+      "attack_phases": [
+        "cracking",
+        "dirb",
+        "dnsteal",
+        "network_scans",
+        "privilege_escalation",
+        "reverse_shell",
+        "service_scans",
+        "service_stop",
+        "webshell",
+        "wpscan"
+      ],
+      "attacker_ip": "172.21.128.119",
+      "windows": {
+        "W=30": {
+          "layer_order_enforced": false,
+          "incidents_after": 566,
+          "reduction_ratio": 0.9957,
+          "true_incidents": 15,
+          "false_correlations": 551,
+          "incident_precision": 0.0265,
+          "attack_alert_recall": 0.8837,
+          "best_attack_incident": {
+            "entity": "ip:172.21.128.119",
+            "n": 11162,
+            "layers": [
+              "application",
+              "network",
+              "system"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "dirb",
+              "service_scans",
+              "wpscan"
+            ],
+            "start": "2022-01-17T11:21:32"
+          },
+          "max_layers_in_attack_incident": 3,
+          "max_phases_in_attack_incident": 3,
+          "attack_incidents_multilayer": 15
+        },
+        "W=30,order": {
+          "layer_order_enforced": true,
+          "incidents_after": 192,
+          "reduction_ratio": 0.9985,
+          "true_incidents": 3,
+          "false_correlations": 189,
+          "incident_precision": 0.0156,
+          "attack_alert_recall": 0.8567,
+          "best_attack_incident": {
+            "entity": "ip:172.21.128.119",
+            "n": 11123,
+            "layers": [
+              "application",
+              "system"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "dirb",
+              "service_scans",
+              "wpscan"
+            ],
+            "start": "2022-01-17T11:21:32"
+          },
+          "max_layers_in_attack_incident": 2,
+          "max_phases_in_attack_incident": 3,
+          "attack_incidents_multilayer": 3
+        },
+        "W=60": {
+          "layer_order_enforced": false,
+          "incidents_after": 463,
+          "reduction_ratio": 0.9965,
+          "true_incidents": 11,
+          "false_correlations": 452,
+          "incident_precision": 0.0238,
+          "attack_alert_recall": 0.8906,
+          "best_attack_incident": {
+            "entity": "ip:172.21.131.50",
+            "n": 35,
+            "layers": [
+              "application",
+              "network"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "network_scans",
+              "service_scans",
+              "webshell",
+              "wpscan"
+            ],
+            "start": "2022-01-17T11:21:29"
+          },
+          "max_layers_in_attack_incident": 3,
+          "max_phases_in_attack_incident": 4,
+          "attack_incidents_multilayer": 11
+        },
+        "W=60,order": {
+          "layer_order_enforced": true,
+          "incidents_after": 169,
+          "reduction_ratio": 0.9987,
+          "true_incidents": 4,
+          "false_correlations": 165,
+          "incident_precision": 0.0237,
+          "attack_alert_recall": 0.8602,
+          "best_attack_incident": {
+            "entity": "ip:172.21.128.119",
+            "n": 11123,
+            "layers": [
+              "application",
+              "system"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "dirb",
+              "service_scans",
+              "wpscan"
+            ],
+            "start": "2022-01-17T11:21:32"
+          },
+          "max_layers_in_attack_incident": 2,
+          "max_phases_in_attack_incident": 3,
+          "attack_incidents_multilayer": 4
+        },
+        "W=300": {
+          "layer_order_enforced": false,
+          "incidents_after": 194,
+          "reduction_ratio": 0.9985,
+          "true_incidents": 10,
+          "false_correlations": 184,
+          "incident_precision": 0.0515,
+          "attack_alert_recall": 0.9071,
+          "best_attack_incident": {
+            "entity": "ip:172.21.128.119",
+            "n": 11166,
+            "layers": [
+              "application",
+              "network",
+              "system"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "cracking",
+              "dirb",
+              "service_scans",
+              "webshell",
+              "wpscan"
+            ],
+            "start": "2022-01-17T11:21:32"
+          },
+          "max_layers_in_attack_incident": 3,
+          "max_phases_in_attack_incident": 5,
+          "attack_incidents_multilayer": 10
+        },
+        "W=300,order": {
+          "layer_order_enforced": true,
+          "incidents_after": 90,
+          "reduction_ratio": 0.9993,
+          "true_incidents": 4,
+          "false_correlations": 86,
+          "incident_precision": 0.0444,
+          "attack_alert_recall": 0.8605,
+          "best_attack_incident": {
+            "entity": "ip:172.21.128.119",
+            "n": 11127,
+            "layers": [
+              "application",
+              "system"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "cracking",
+              "dirb",
+              "service_scans",
+              "webshell",
+              "wpscan"
+            ],
+            "start": "2022-01-17T11:21:32"
+          },
+          "max_layers_in_attack_incident": 2,
+          "max_phases_in_attack_incident": 5,
+          "attack_incidents_multilayer": 4
+        }
+      }
+    },
+    "shaw": {
+      "scenario": "shaw",
+      "alerts": 70782,
+      "attack_alerts": 6935,
+      "alerts_per_layer": {
+        "system": 1800,
+        "application": 34796,
+        "network": 34186
+      },
+      "attack_alerts_per_layer": {
+        "system": 63,
+        "application": 6361,
+        "network": 511
+      },
+      "alerts_per_ids": {
+        "aminer": 2243,
+        "wazuh": 35139,
+        "suricata": 33400
+      },
+      "attack_phases": [
+        "cracking",
+        "dirb",
+        "dnsteal",
+        "network_scans",
+        "privilege_escalation",
+        "reverse_shell",
+        "service_scans",
+        "service_stop",
+        "webshell",
+        "wpscan"
+      ],
+      "attacker_ip": "172.24.249.224",
+      "windows": {
+        "W=30": {
+          "layer_order_enforced": false,
+          "incidents_after": 111,
+          "reduction_ratio": 0.9984,
+          "true_incidents": 0,
+          "false_correlations": 111,
+          "incident_precision": 0.0,
+          "attack_alert_recall": 0.0,
+          "best_attack_incident": null,
+          "max_layers_in_attack_incident": 0,
+          "max_phases_in_attack_incident": 0,
+          "attack_incidents_multilayer": 0
+        },
+        "W=30,order": {
+          "layer_order_enforced": true,
+          "incidents_after": 60,
+          "reduction_ratio": 0.9992,
+          "true_incidents": 0,
+          "false_correlations": 60,
+          "incident_precision": 0.0,
+          "attack_alert_recall": 0.0,
+          "best_attack_incident": null,
+          "max_layers_in_attack_incident": 0,
+          "max_phases_in_attack_incident": 0,
+          "attack_incidents_multilayer": 0
+        },
+        "W=60": {
+          "layer_order_enforced": false,
+          "incidents_after": 109,
+          "reduction_ratio": 0.9985,
+          "true_incidents": 1,
+          "false_correlations": 108,
+          "incident_precision": 0.0092,
+          "attack_alert_recall": 0.0052,
+          "best_attack_incident": {
+            "entity": "host:var",
+            "n": 36,
+            "layers": [
+              "application",
+              "system"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "privilege_escalation",
+              "reverse_shell"
+            ],
+            "start": "2022-01-29T15:20:15"
+          },
+          "max_layers_in_attack_incident": 2,
+          "max_phases_in_attack_incident": 2,
+          "attack_incidents_multilayer": 1
+        },
+        "W=60,order": {
+          "layer_order_enforced": true,
+          "incidents_after": 54,
+          "reduction_ratio": 0.9992,
+          "true_incidents": 0,
+          "false_correlations": 54,
+          "incident_precision": 0.0,
+          "attack_alert_recall": 0.0,
+          "best_attack_incident": null,
+          "max_layers_in_attack_incident": 0,
+          "max_phases_in_attack_incident": 0,
+          "attack_incidents_multilayer": 0
+        },
+        "W=300": {
+          "layer_order_enforced": false,
+          "incidents_after": 120,
+          "reduction_ratio": 0.9983,
+          "true_incidents": 3,
+          "false_correlations": 117,
+          "incident_precision": 0.025,
+          "attack_alert_recall": 0.872,
+          "best_attack_incident": {
+            "entity": "ip:172.24.249.224",
+            "n": 6006,
+            "layers": [
+              "application",
+              "network"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "cracking",
+              "dirb",
+              "network_scans",
+              "webshell",
+              "wpscan"
+            ],
+            "start": "2022-01-29T14:37:14"
+          },
+          "max_layers_in_attack_incident": 2,
+          "max_phases_in_attack_incident": 5,
+          "attack_incidents_multilayer": 3
+        },
+        "W=300,order": {
+          "layer_order_enforced": true,
+          "incidents_after": 51,
+          "reduction_ratio": 0.9993,
+          "true_incidents": 2,
+          "false_correlations": 49,
+          "incident_precision": 0.0392,
+          "attack_alert_recall": 0.8668,
+          "best_attack_incident": {
+            "entity": "ip:172.24.249.224",
+            "n": 6006,
+            "layers": [
+              "application",
+              "network"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "cracking",
+              "dirb",
+              "network_scans",
+              "webshell",
+              "wpscan"
+            ],
+            "start": "2022-01-29T14:37:14"
+          },
+          "max_layers_in_attack_incident": 2,
+          "max_phases_in_attack_incident": 5,
+          "attack_incidents_multilayer": 2
+        }
+      }
+    },
+    "wardbeck": {
+      "scenario": "wardbeck",
+      "alerts": 91257,
+      "attack_alerts": 7040,
+      "alerts_per_layer": {
+        "system": 1515,
+        "network": 50342,
+        "application": 39400
+      },
+      "attack_alerts_per_layer": {
+        "system": 65,
+        "network": 420,
+        "application": 6555
+      },
+      "alerts_per_ids": {
+        "aminer": 3053,
+        "wazuh": 39184,
+        "suricata": 49020
+      },
+      "attack_phases": [
+        "cracking",
+        "dirb",
+        "dnsteal",
+        "network_scans",
+        "privilege_escalation",
+        "reverse_shell",
+        "service_scans",
+        "service_stop",
+        "webshell",
+        "wpscan"
+      ],
+      "attacker_ip": "10.132.56.81",
+      "windows": {
+        "W=30": {
+          "layer_order_enforced": false,
+          "incidents_after": 393,
+          "reduction_ratio": 0.9957,
+          "true_incidents": 10,
+          "false_correlations": 383,
+          "incident_precision": 0.0254,
+          "attack_alert_recall": 0.8922,
+          "best_attack_incident": {
+            "entity": "ip:10.132.56.81",
+            "n": 6088,
+            "layers": [
+              "application",
+              "network",
+              "system"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "dirb",
+              "service_scans",
+              "wpscan"
+            ],
+            "start": "2022-01-23T12:11:01"
+          },
+          "max_layers_in_attack_incident": 3,
+          "max_phases_in_attack_incident": 3,
+          "attack_incidents_multilayer": 10
+        },
+        "W=30,order": {
+          "layer_order_enforced": true,
+          "incidents_after": 123,
+          "reduction_ratio": 0.9987,
+          "true_incidents": 5,
+          "false_correlations": 118,
+          "incident_precision": 0.0407,
+          "attack_alert_recall": 0.8689,
+          "best_attack_incident": {
+            "entity": "ip:10.132.56.81",
+            "n": 6064,
+            "layers": [
+              "application",
+              "system"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "dirb",
+              "service_scans",
+              "wpscan"
+            ],
+            "start": "2022-01-23T12:11:01"
+          },
+          "max_layers_in_attack_incident": 2,
+          "max_phases_in_attack_incident": 3,
+          "attack_incidents_multilayer": 5
+        },
+        "W=60": {
+          "layer_order_enforced": false,
+          "incidents_after": 384,
+          "reduction_ratio": 0.9958,
+          "true_incidents": 9,
+          "false_correlations": 375,
+          "incident_precision": 0.0234,
+          "attack_alert_recall": 0.9018,
+          "best_attack_incident": {
+            "entity": "ip:10.132.56.81",
+            "n": 6089,
+            "layers": [
+              "application",
+              "network",
+              "system"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "dirb",
+              "service_scans",
+              "webshell",
+              "wpscan"
+            ],
+            "start": "2022-01-23T12:11:01"
+          },
+          "max_layers_in_attack_incident": 3,
+          "max_phases_in_attack_incident": 4,
+          "attack_incidents_multilayer": 9
+        },
+        "W=60,order": {
+          "layer_order_enforced": true,
+          "incidents_after": 113,
+          "reduction_ratio": 0.9988,
+          "true_incidents": 4,
+          "false_correlations": 109,
+          "incident_precision": 0.0354,
+          "attack_alert_recall": 0.8685,
+          "best_attack_incident": {
+            "entity": "ip:10.132.56.81",
+            "n": 6065,
+            "layers": [
+              "application",
+              "system"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "dirb",
+              "service_scans",
+              "webshell",
+              "wpscan"
+            ],
+            "start": "2022-01-23T12:11:01"
+          },
+          "max_layers_in_attack_incident": 2,
+          "max_phases_in_attack_incident": 4,
+          "attack_incidents_multilayer": 4
+        },
+        "W=300": {
+          "layer_order_enforced": false,
+          "incidents_after": 244,
+          "reduction_ratio": 0.9973,
+          "true_incidents": 5,
+          "false_correlations": 239,
+          "incident_precision": 0.0205,
+          "attack_alert_recall": 0.8955,
+          "best_attack_incident": {
+            "entity": "ip:10.132.56.81",
+            "n": 6128,
+            "layers": [
+              "application",
+              "network",
+              "system"
+            ],
+            "attack_fraction": 0.995,
+            "phases": [
+              "cracking",
+              "dirb",
+              "service_scans",
+              "webshell",
+              "wpscan"
+            ],
+            "start": "2022-01-23T12:09:21.017184"
+          },
+          "max_layers_in_attack_incident": 3,
+          "max_phases_in_attack_incident": 5,
+          "attack_incidents_multilayer": 5
+        },
+        "W=300,order": {
+          "layer_order_enforced": true,
+          "incidents_after": 77,
+          "reduction_ratio": 0.9992,
+          "true_incidents": 2,
+          "false_correlations": 75,
+          "incident_precision": 0.026,
+          "attack_alert_recall": 0.8676,
+          "best_attack_incident": {
+            "entity": "ip:10.132.56.81",
+            "n": 6096,
+            "layers": [
+              "application",
+              "network",
+              "system"
+            ],
+            "attack_fraction": 0.995,
+            "phases": [
+              "cracking",
+              "dirb",
+              "service_scans",
+              "webshell",
+              "wpscan"
+            ],
+            "start": "2022-01-23T12:09:21.017184"
+          },
+          "max_layers_in_attack_incident": 3,
+          "max_phases_in_attack_incident": 5,
+          "attack_incidents_multilayer": 2
+        }
+      }
+    },
+    "wheeler": {
+      "scenario": "wheeler",
+      "alerts": 616161,
+      "attack_alerts": 432334,
+      "alerts_per_layer": {
+        "system": 1584,
+        "network": 137608,
+        "application": 476969
+      },
+      "attack_alerts_per_layer": {
+        "system": 62,
+        "application": 430886,
+        "network": 1386
+      },
+      "alerts_per_ids": {
+        "aminer": 12222,
+        "wazuh": 466636,
+        "suricata": 137303
+      },
+      "attack_phases": [
+        "dirb",
+        "dnsteal",
+        "network_scans",
+        "privilege_escalation",
+        "reverse_shell",
+        "service_scans",
+        "service_stop",
+        "webshell",
+        "wpscan"
+      ],
+      "attacker_ip": "10.38.243.125",
+      "windows": {
+        "W=30": {
+          "layer_order_enforced": false,
+          "incidents_after": 1487,
+          "reduction_ratio": 0.9976,
+          "true_incidents": 10,
+          "false_correlations": 1477,
+          "incident_precision": 0.0067,
+          "attack_alert_recall": 0.9967,
+          "best_attack_incident": {
+            "entity": "ip:10.38.243.125",
+            "n": 430682,
+            "layers": [
+              "application",
+              "network",
+              "system"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "dirb",
+              "service_scans",
+              "webshell",
+              "wpscan"
+            ],
+            "start": "2022-01-30T07:39:04"
+          },
+          "max_layers_in_attack_incident": 3,
+          "max_phases_in_attack_incident": 4,
+          "attack_incidents_multilayer": 10
+        },
+        "W=30,order": {
+          "layer_order_enforced": true,
+          "incidents_after": 763,
+          "reduction_ratio": 0.9988,
+          "true_incidents": 6,
+          "false_correlations": 757,
+          "incident_precision": 0.0079,
+          "attack_alert_recall": 0.996,
+          "best_attack_incident": {
+            "entity": "ip:10.38.243.125",
+            "n": 430529,
+            "layers": [
+              "application",
+              "system"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "dirb",
+              "service_scans",
+              "webshell",
+              "wpscan"
+            ],
+            "start": "2022-01-30T07:39:04"
+          },
+          "max_layers_in_attack_incident": 2,
+          "max_phases_in_attack_incident": 4,
+          "attack_incidents_multilayer": 6
+        },
+        "W=60": {
+          "layer_order_enforced": false,
+          "incidents_after": 803,
+          "reduction_ratio": 0.9987,
+          "true_incidents": 9,
+          "false_correlations": 794,
+          "incident_precision": 0.0112,
+          "attack_alert_recall": 0.9968,
+          "best_attack_incident": {
+            "entity": "ip:10.38.243.125",
+            "n": 430682,
+            "layers": [
+              "application",
+              "network",
+              "system"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "dirb",
+              "service_scans",
+              "webshell",
+              "wpscan"
+            ],
+            "start": "2022-01-30T07:39:04"
+          },
+          "max_layers_in_attack_incident": 3,
+          "max_phases_in_attack_incident": 4,
+          "attack_incidents_multilayer": 9
+        },
+        "W=60,order": {
+          "layer_order_enforced": true,
+          "incidents_after": 534,
+          "reduction_ratio": 0.9991,
+          "true_incidents": 7,
+          "false_correlations": 527,
+          "incident_precision": 0.0131,
+          "attack_alert_recall": 0.996,
+          "best_attack_incident": {
+            "entity": "ip:10.38.243.125",
+            "n": 430529,
+            "layers": [
+              "application",
+              "system"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "dirb",
+              "service_scans",
+              "webshell",
+              "wpscan"
+            ],
+            "start": "2022-01-30T07:39:04"
+          },
+          "max_layers_in_attack_incident": 2,
+          "max_phases_in_attack_incident": 4,
+          "attack_incidents_multilayer": 7
+        },
+        "W=300": {
+          "layer_order_enforced": false,
+          "incidents_after": 262,
+          "reduction_ratio": 0.9996,
+          "true_incidents": 5,
+          "false_correlations": 257,
+          "incident_precision": 0.0191,
+          "attack_alert_recall": 0.9972,
+          "best_attack_incident": {
+            "entity": "ip:10.38.243.125",
+            "n": 431002,
+            "layers": [
+              "application",
+              "network",
+              "system"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "dirb",
+              "network_scans",
+              "service_scans",
+              "webshell",
+              "wpscan"
+            ],
+            "start": "2022-01-30T07:30:34.732630"
+          },
+          "max_layers_in_attack_incident": 3,
+          "max_phases_in_attack_incident": 5,
+          "attack_incidents_multilayer": 5
+        },
+        "W=300,order": {
+          "layer_order_enforced": true,
+          "incidents_after": 198,
+          "reduction_ratio": 0.9997,
+          "true_incidents": 3,
+          "false_correlations": 195,
+          "incident_precision": 0.0152,
+          "attack_alert_recall": 0.9965,
+          "best_attack_incident": {
+            "entity": "ip:10.38.243.125",
+            "n": 430849,
+            "layers": [
+              "application",
+              "network",
+              "system"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "dirb",
+              "network_scans",
+              "service_scans",
+              "webshell",
+              "wpscan"
+            ],
+            "start": "2022-01-30T07:30:34.732630"
+          },
+          "max_layers_in_attack_incident": 3,
+          "max_phases_in_attack_incident": 5,
+          "attack_incidents_multilayer": 3
+        }
+      }
+    },
+    "wilson": {
+      "scenario": "wilson",
+      "alerts": 634246,
+      "attack_alerts": 440108,
+      "alerts_per_layer": {
+        "system": 1628,
+        "network": 130671,
+        "application": 501947
+      },
+      "attack_alerts_per_layer": {
+        "system": 58,
+        "application": 436653,
+        "network": 3397
+      },
+      "alerts_per_ids": {
+        "aminer": 8943,
+        "wazuh": 495227,
+        "suricata": 130076
+      },
+      "attack_phases": [
+        "cracking",
+        "dirb",
+        "dnsteal",
+        "network_scans",
+        "privilege_escalation",
+        "reverse_shell",
+        "service_scans",
+        "service_stop",
+        "webshell",
+        "wpscan"
+      ],
+      "attacker_ip": "10.182.193.78",
+      "windows": {
+        "W=30": {
+          "layer_order_enforced": false,
+          "incidents_after": 1751,
+          "reduction_ratio": 0.9972,
+          "true_incidents": 47,
+          "false_correlations": 1704,
+          "incident_precision": 0.0268,
+          "attack_alert_recall": 0.9934,
+          "best_attack_incident": {
+            "entity": "ip:10.182.193.78",
+            "n": 434836,
+            "layers": [
+              "application",
+              "network",
+              "system"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "cracking",
+              "dirb",
+              "service_scans",
+              "webshell",
+              "wpscan"
+            ],
+            "start": "2022-02-07T10:59:13"
+          },
+          "max_layers_in_attack_incident": 3,
+          "max_phases_in_attack_incident": 5,
+          "attack_incidents_multilayer": 47
+        },
+        "W=30,order": {
+          "layer_order_enforced": true,
+          "incidents_after": 1008,
+          "reduction_ratio": 0.9984,
+          "true_incidents": 33,
+          "false_correlations": 975,
+          "incident_precision": 0.0327,
+          "attack_alert_recall": 0.0013,
+          "best_attack_incident": {
+            "entity": "ip:10.182.194.5",
+            "n": 69,
+            "layers": [
+              "application",
+              "network"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "dirb",
+              "wpscan"
+            ],
+            "start": "2022-02-07T11:18:24.846044"
+          },
+          "max_layers_in_attack_incident": 2,
+          "max_phases_in_attack_incident": 2,
+          "attack_incidents_multilayer": 33
+        },
+        "W=60": {
+          "layer_order_enforced": false,
+          "incidents_after": 867,
+          "reduction_ratio": 0.9986,
+          "true_incidents": 22,
+          "false_correlations": 845,
+          "incident_precision": 0.0254,
+          "attack_alert_recall": 0.9937,
+          "best_attack_incident": {
+            "entity": "ip:10.182.193.78",
+            "n": 434836,
+            "layers": [
+              "application",
+              "network",
+              "system"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "cracking",
+              "dirb",
+              "service_scans",
+              "webshell",
+              "wpscan"
+            ],
+            "start": "2022-02-07T10:59:13"
+          },
+          "max_layers_in_attack_incident": 3,
+          "max_phases_in_attack_incident": 5,
+          "attack_incidents_multilayer": 22
+        },
+        "W=60,order": {
+          "layer_order_enforced": true,
+          "incidents_after": 661,
+          "reduction_ratio": 0.999,
+          "true_incidents": 21,
+          "false_correlations": 640,
+          "incident_precision": 0.0318,
+          "attack_alert_recall": 0.0023,
+          "best_attack_incident": {
+            "entity": "ip:10.182.193.181",
+            "n": 135,
+            "layers": [
+              "application",
+              "network"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "cracking",
+              "dirb",
+              "wpscan"
+            ],
+            "start": "2022-02-07T11:19:09.245442"
+          },
+          "max_layers_in_attack_incident": 2,
+          "max_phases_in_attack_incident": 3,
+          "attack_incidents_multilayer": 21
+        },
+        "W=300": {
+          "layer_order_enforced": false,
+          "incidents_after": 252,
+          "reduction_ratio": 0.9996,
+          "true_incidents": 6,
+          "false_correlations": 246,
+          "incident_precision": 0.0238,
+          "attack_alert_recall": 0.9892,
+          "best_attack_incident": {
+            "entity": "ip:10.182.193.78",
+            "n": 434880,
+            "layers": [
+              "application",
+              "network",
+              "system"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "cracking",
+              "dirb",
+              "network_scans",
+              "service_scans",
+              "webshell",
+              "wpscan"
+            ],
+            "start": "2022-02-07T10:57:53.551250"
+          },
+          "max_layers_in_attack_incident": 3,
+          "max_phases_in_attack_incident": 6,
+          "attack_incidents_multilayer": 6
+        },
+        "W=300,order": {
+          "layer_order_enforced": true,
+          "incidents_after": 223,
+          "reduction_ratio": 0.9996,
+          "true_incidents": 6,
+          "false_correlations": 217,
+          "incident_precision": 0.0269,
+          "attack_alert_recall": 0.9891,
+          "best_attack_incident": {
+            "entity": "ip:10.182.193.78",
+            "n": 434777,
+            "layers": [
+              "application",
+              "network"
+            ],
+            "attack_fraction": 1.0,
+            "phases": [
+              "cracking",
+              "dirb",
+              "network_scans",
+              "service_scans",
+              "webshell",
+              "wpscan"
+            ],
+            "start": "2022-02-07T10:57:53.551250"
+          },
+          "max_layers_in_attack_incident": 2,
+          "max_phases_in_attack_incident": 6,
+          "attack_incidents_multilayer": 6
+        }
+      }
+    }
+  },
+  "label_columns": [
+    "scenario",
+    "phase",
+    "start",
+    "end"
+  ],
+  "n_label_rows": 79,
+  "aggregate": {
+    "W=30": {
+      "reduction_ratio": {
+        "mean": 0.997,
+        "std": 0.0019
+      },
+      "incident_precision": {
+        "mean": 0.0308,
+        "std": 0.0232
+      },
+      "attack_alert_recall": {
+        "mean": 0.8381,
+        "std": 0.3197
+      },
+      "max_layers_in_attack_incident": {
+        "mean": 2.625,
+        "std": 0.9922
+      },
+      "max_phases_in_attack_incident": {
+        "mean": 3.0,
+        "std": 1.3229
+      },
+      "false_correlations": {
+        "mean": 669.875,
+        "std": 561.9583
+      },
+      "scenarios_with_multilayer_attack_incident": 7
+    },
+    "W=30,order": {
+      "reduction_ratio": {
+        "mean": 0.9989,
+        "std": 0.0006
+      },
+      "incident_precision": {
+        "mean": 0.0326,
+        "std": 0.026
+      },
+      "attack_alert_recall": {
+        "mean": 0.4571,
+        "std": 0.4582
+      },
+      "max_layers_in_attack_incident": {
+        "mean": 1.75,
+        "std": 0.6614
+      },
+      "max_phases_in_attack_incident": {
+        "mean": 2.375,
+        "std": 1.2183
+      },
+      "false_correlations": {
+        "mean": 317.625,
+        "std": 325.7725
+      },
+      "scenarios_with_multilayer_attack_incident": 7
+    },
+    "W=60": {
+      "reduction_ratio": {
+        "mean": 0.9975,
+        "std": 0.002
+      },
+      "incident_precision": {
+        "mean": 0.0299,
+        "std": 0.0192
+      },
+      "attack_alert_recall": {
+        "mean": 0.842,
+        "std": 0.3188
+      },
+      "max_layers_in_attack_incident": {
+        "mean": 2.875,
+        "std": 0.3307
+      },
+      "max_phases_in_attack_incident": {
+        "mean": 3.875,
+        "std": 0.927
+      },
+      "false_correlations": {
+        "mean": 455.0,
+        "std": 251.2469
+      },
+      "scenarios_with_multilayer_attack_incident": 8
+    },
+    "W=60,order": {
+      "reduction_ratio": {
+        "mean": 0.999,
+        "std": 0.0006
+      },
+      "incident_precision": {
+        "mean": 0.0324,
+        "std": 0.0236
+      },
+      "attack_alert_recall": {
+        "mean": 0.4579,
+        "std": 0.4588
+      },
+      "max_layers_in_attack_incident": {
+        "mean": 1.75,
+        "std": 0.6614
+      },
+      "max_phases_in_attack_incident": {
+        "mean": 2.625,
+        "std": 1.317
+      },
+      "false_correlations": {
+        "mean": 240.125,
+        "std": 205.6966
+      },
+      "scenarios_with_multilayer_attack_incident": 7
+    },
+    "W=300": {
+      "reduction_ratio": {
+        "mean": 0.9986,
+        "std": 0.0012
+      },
+      "incident_precision": {
+        "mean": 0.0358,
+        "std": 0.0172
+      },
+      "attack_alert_recall": {
+        "mean": 0.9523,
+        "std": 0.0486
+      },
+      "max_layers_in_attack_incident": {
+        "mean": 2.875,
+        "std": 0.3307
+      },
+      "max_phases_in_attack_incident": {
+        "mean": 5.25,
+        "std": 0.433
+      },
+      "false_correlations": {
+        "mean": 205.125,
+        "std": 43.1319
+      },
+      "scenarios_with_multilayer_attack_incident": 8
+    },
+    "W=300,order": {
+      "reduction_ratio": {
+        "mean": 0.9994,
+        "std": 0.0004
+      },
+      "incident_precision": {
+        "mean": 0.0427,
+        "std": 0.0192
+      },
+      "attack_alert_recall": {
+        "mean": 0.8142,
+        "std": 0.3123
+      },
+      "max_layers_in_attack_incident": {
+        "mean": 2.25,
+        "std": 0.433
+      },
+      "max_phases_in_attack_incident": {
+        "mean": 4.75,
+        "std": 1.0897
+      },
+      "false_correlations": {
+        "mean": 110.0,
+        "std": 58.9131
+      },
+      "scenarios_with_multilayer_attack_incident": 8
+    }
+  },
+  "second_stage_loso": [
+    {
+      "held_out": "fox",
+      "n_candidates": 5585,
+      "n_attack_candidates": 162,
+      "lgbm": {
+        "precision": 0.8,
+        "recall": 0.0247,
+        "f1": 0.0479,
+        "roc_auc": 0.5352
+      },
+      "rule": {
+        "precision": 0.0244,
+        "recall": 0.0123,
+        "f1": 0.0164
+      }
+    },
+    {
+      "held_out": "harrison",
+      "n_candidates": 5802,
+      "n_attack_candidates": 402,
+      "lgbm": {
+        "precision": 1.0,
+        "recall": 0.0075,
+        "f1": 0.0148,
+        "roc_auc": 0.4507
+      },
+      "rule": {
+        "precision": 0.04,
+        "recall": 0.01,
+        "f1": 0.0159
+      }
+    },
+    {
+      "held_out": "russellmitchell",
+      "n_candidates": 3566,
+      "n_attack_candidates": 85,
+      "lgbm": {
+        "precision": 1.0,
+        "recall": 0.0353,
+        "f1": 0.0682,
+        "roc_auc": 0.5003
+      },
+      "rule": {
+        "precision": 0.0508,
+        "recall": 0.0353,
+        "f1": 0.0417
+      }
+    },
+    {
+      "held_out": "santos",
+      "n_candidates": 5831,
+      "n_attack_candidates": 152,
+      "lgbm": {
+        "precision": 0.75,
+        "recall": 0.0197,
+        "f1": 0.0385,
+        "roc_auc": 0.5016
+      },
+      "rule": {
+        "precision": 0.0235,
+        "recall": 0.0132,
+        "f1": 0.0169
+      }
+    },
+    {
+      "held_out": "shaw",
+      "n_candidates": 5880,
+      "n_attack_candidates": 78,
+      "lgbm": {
+        "precision": 1.0,
+        "recall": 0.0385,
+        "f1": 0.0741,
+        "roc_auc": 0.4767
+      },
+      "rule": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      }
+    },
+    {
+      "held_out": "wardbeck",
+      "n_candidates": 7579,
+      "n_attack_candidates": 76,
+      "lgbm": {
+        "precision": 1.0,
+        "recall": 0.0395,
+        "f1": 0.0759,
+        "roc_auc": 0.4906
+      },
+      "rule": {
+        "precision": 0.0274,
+        "recall": 0.0263,
+        "f1": 0.0268
+      }
+    },
+    {
+      "held_out": "wheeler",
+      "n_candidates": 10431,
+      "n_attack_candidates": 100,
+      "lgbm": {
+        "precision": 0.6667,
+        "recall": 0.04,
+        "f1": 0.0755,
+        "roc_auc": 0.4854
+      },
+      "rule": {
+        "precision": 0.011,
+        "recall": 0.01,
+        "f1": 0.0105
+      }
+    },
+    {
+      "held_out": "wilson",
+      "n_candidates": 9436,
+      "n_attack_candidates": 156,
+      "lgbm": {
+        "precision": 1.0,
+        "recall": 0.0256,
+        "f1": 0.05,
+        "roc_auc": 0.4602
+      },
+      "rule": {
+        "precision": 0.022,
+        "recall": 0.0128,
+        "f1": 0.0162
+      }
+    }
+  ],
+  "second_stage_loso_mean": {
+    "lgbm": {
+      "precision": 0.9021,
+      "recall": 0.0289,
+      "f1": 0.0556
+    },
+    "rule": {
+      "precision": 0.0249,
+      "recall": 0.015,
+      "f1": 0.0181
+    }
+  }
+}

@@ -358,8 +358,10 @@ def main():
                  f"attack-alert recall {ag['attack_alert_recall']['mean']:.3f} ± {ag['attack_alert_recall']['std']:.3f}, and in "
                  f"{ag['scenarios_with_multilayer_attack_incident']} of {n_scen} scenarios the attack is reconstructed as a "
                  f"cross-layer incident"
-                 + (f"; a leave-one-scenario-out second-stage classifier reaches incident F1 {ms_['lgbm']['f1']:.3f} versus "
-                    f"{ms_['rule']['f1']:.3f} for the fixed rule" if ms_ else "")
+                 + (f"; a leave-one-scenario-out second-stage classifier on the eight generic features is precise "
+                    f"({ms_['lgbm']['precision']:.3f}) but recovers only {100*ms_['lgbm']['recall']:.1f}% of attack candidates "
+                    f"(F1 {ms_['lgbm']['f1']:.3f} vs {ms_['rule']['f1']:.3f} for the rule), a negative transfer result that "
+                    "the paper reports as such" if ms_ else "")
                  + ". Because the alerts come from third-party detectors, the end-to-end run of our own per-layer detectors "
                  "on the raw AIT-LDS v2 logs (7-26 GB per scenario) remains future work; the experiments package ships a "
                  "ready-to-run harness for it (experiments/ait_lds_eval.py). Sections 6.3.1, 7.5 and 8 keep the limitation explicit.")
