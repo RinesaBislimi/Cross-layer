@@ -1,14 +1,3 @@
-"""Post-processing polish for the generated .docx files.
-
-  * clickable references: every http(s)/doi URL in the reference list becomes a
-    real hyperlink, every reference entry gets a bookmark, and every in-text
-    citation number [n] (also inside ranges such as [32-35] and lists such as
-    [1, 2, 42]) becomes an internal hyperlink to that bookmark;
-  * consistent captions: "Fig. n" / "Table n" labels in bold, captions kept
-    with their figure/table;
-  * simple bordered tables ("Excel-style"): single-line grid, bold shaded
-    header row, full text width, autofit to window.
-"""
 from __future__ import annotations
 
 import copy
@@ -49,13 +38,13 @@ def _run(text: str, rpr_template=None, bold=None, color=None, underline=None, si
 def _hyperlink_external(part, url: str, text: str, rpr_template=None):
     rid = part.relate_to(url, RT.HYPERLINK, is_external=True)
     h = OxmlElement("w:hyperlink"); h.set(qn("r:id"), rid)
-    h.append(_run(text, rpr_template, color="0563C1", underline=True))
+    h.append(_run(text, rpr_template))   # black, no underline: same look as body text
     return h
 
 
 def _hyperlink_anchor(anchor: str, text: str, rpr_template=None):
     h = OxmlElement("w:hyperlink"); h.set(qn("w:anchor"), anchor)
-    h.append(_run(text, rpr_template, color="0563C1"))
+    h.append(_run(text, rpr_template))
     return h
 
 
