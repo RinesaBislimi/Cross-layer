@@ -1154,10 +1154,18 @@ def main():
             "correlations per scenario arise from the benign noise that Wazuh and AMiner emit on routine "
             "activity (package updates, ClamAV refreshes, user logins), which is the realistic false-positive "
             "load that the controlled benchmark of Section 6.3 only approximates. "
-            + (f"A second-stage classifier trained leave-one-scenario-out on the eight features of Section 4.5 "
-               f"reaches incident F1 = {ms_['lgbm']['f1']:.3f} (precision {ms_['lgbm']['precision']:.3f}, recall "
-               f"{ms_['lgbm']['recall']:.3f}) on the held-out scenario against {ms_['rule']['f1']:.3f} for the fixed rule, "
-               "i.e. the learned stage transfers across testbeds. " if ms_ else "")
+            + (f"A second-stage classifier trained leave-one-scenario-out on the eight generic features of "
+               f"Section 4.5 is a negative result that we report as such: on the held-out scenario it is precise "
+               f"(precision {ms_['lgbm']['precision']:.3f}) but recovers only {100*ms_['lgbm']['recall']:.1f}% of the attack "
+               f"candidates (F1 = {ms_['lgbm']['f1']:.3f}, against {ms_['rule']['f1']:.3f} for the fixed rule), because the "
+               "attack candidates of a new testbed differ in size, span and score profile from those of the "
+               "training testbeds; features that carry semantic content (rule identifiers, affected services) "
+               "will be needed for the learned stage to transfer across environments. " if ms_ else "")
+            + ((lambda low: (f"In {', '.join(low)} the attack alerts are largely not linked (attack-alert recall below 0.5): "
+                             "there the attacker's alerts either carry no shared address within the window or the attack "
+                             "is, by construction of the scenario, barely visible in the alerts, which marks the limit of "
+                             "identifier-based correlation. ") if low else "")(
+                   [n for n, r in sorted(scen.items()) if (r["windows"]["W=60"]["attack_alert_recall"] or 0) < 0.5]))
             + (f"Enforcing the outside-in layer-ordering constraint on these streams is counter-productive: because the "
                f"host-based and network detectors fire in interleaved order (a web-scan rule often precedes the "
                f"corresponding Suricata alert), the ordered variant keeps attack-alert recall at only "
@@ -1439,6 +1447,8 @@ def main():
     for i, r in enumerate(refs, start=1):
         cur = insert_after(cur, f"[{i}]\t{r}", body_style)
 
+    from docx_polish import polish
+    print("polish:", polish(doc))
     doc.save(OUT)
     print("saved ->", OUT)
     print(f"headline: net F1={F1_NET:.4f} ({b_net}), sys F1={F1_SYS:.4f} ({b_sys}), app F1={F1_APP:.4f} ({b_app})")
