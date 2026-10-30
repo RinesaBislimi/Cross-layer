@@ -69,3 +69,8 @@ yarn-error.log*
 *.bak
 .env.local
 .env.production
+
+# ── Paper experiments: transient artefacts ───────────────────────────────────
+backend/experiments/results/pdfpages/
+backend/experiments/results/*.log
+backend/experiments/_*.py

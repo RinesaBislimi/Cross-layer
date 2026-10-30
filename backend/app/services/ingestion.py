@@ -1,5 +1,7 @@
 import codecs
 import csv
+import hashlib
+import hmac
 import json
 import re
 import logging
@@ -185,6 +187,49 @@ def extract_entity_from_tda(row: dict) -> Optional[str]:
         return row['entity']
     return None
 
+
+_IPV4 = re.compile(r"(?:\d{1,3}\.){3}\d{1,3}")
+_HOST = re.compile(r"[a-z0-9][a-z0-9\-\.]*")
+_TYPED_PREFIXES = ("user", "host", "ip", "node", "dst-port", "session", "app")
+
+def canonical_entity(raw: Any) -> Optional[str]:
+    """Normalise a heterogeneous identifier to a canonical 'type:value' string and,
+    when PSEUDONYMISE_ENTITIES is set, replace the value by a keyed hash.
+
+    IPv4/IPv6 addresses are canonicalised textually, host names are lower-cased
+    and stripped of their domain suffix, user identifiers keep a 'user:' prefix.
+    Matching in the correlation engine is exact on the returned string, so the
+    same host seen as an IP in network flows and as a node/host name in system
+    logs must be mapped to the same canonical value upstream (static mapping).
+    """
+    if raw is None:
+        return None
+    s = str(raw).strip()
+    if not s:
+        return None
+    low = s.lower()
+    kind, val = None, low
+    if ":" in low and low.split(":", 1)[0] in _TYPED_PREFIXES:
+        kind, val = low.split(":", 1)
+        val = val.strip()
+    elif _IPV4.fullmatch(low):
+        kind = "ip"
+        val = ".".join(str(int(o)) for o in low.split("."))   # drop leading zeros
+    elif ":" in low and all(c in "0123456789abcdef:" for c in low):
+        kind = "ip"                                              # IPv6
+    elif _HOST.fullmatch(low):
+        kind = "host"
+        val = low.split(".")[0]                                  # strip domain suffix
+    else:
+        kind = "id"
+    canon = f"{kind}:{val}"
+    settings = get_settings()
+    if settings.PSEUDONYMISE_ENTITIES:
+        key = (settings.ENTITY_HMAC_KEY or settings.JWT_SECRET).encode("utf-8")
+        digest = hmac.new(key, canon.encode("utf-8"), hashlib.sha256).hexdigest()[:24]
+        return f"{kind}:{digest}"
+    return canon
+
 def ingest_bgl_csv(db: Session, csv_path: Optional[str] = None) -> int:
     if csv_path is None:
         s = get_settings()
@@ -228,7 +273,7 @@ def ingest_bgl_csv(db: Session, csv_path: Optional[str] = None) -> int:
             if not timestamp:
                 timestamp = datetime.utcnow()
 
-            entity = extract_entity_from_bgl(message, row)
+            entity = canonical_entity(extract_entity_from_bgl(message, row))
 
             label = 0
             raw_ts_field = row.get("timestamp", "").strip()
@@ -342,7 +387,7 @@ def ingest_cicids_csv(db: Session, csv_path: Optional[str] = None) -> int:
             if not timestamp:
                 timestamp = _now()
 
-            entity = extract_entity_from_cicids(row)
+            entity = canonical_entity(extract_entity_from_cicids(row))
 
             sip = _row_lookup(row, "Src IP", "Source IP", "src_ip")
             dip = _row_lookup(row, "Dst IP", "Dest IP", "dst_ip")
@@ -407,10 +452,12 @@ def ingest_cicids_csv(db: Session, csv_path: Optional[str] = None) -> int:
         raise
 
 def ingest_tda_csv(db: Session, csv_path: Optional[str] = None, max_rows: int = 500_000) -> int:
-    import random as _random
-
-    _rng = _random.Random(42)
-    ANOMALY_RATE = 0.15
+    # NOTE: TDA ships without verified ground-truth labels. We deliberately do
+    # NOT invent random labels here. Rows are stored unlabeled (label=None) and
+    # synthetic labels are generated at training time by Isolation Forest
+    # (contamination=0.05) in feature_engineering.build_tda_features(), matching
+    # the method described in the manuscript. The limitation of evaluating
+    # against these pseudo-labels is discussed in the paper's threats to validity.
 
     if csv_path is None:
         s = get_settings()
@@ -479,6 +526,7 @@ def ingest_tda_csv(db: Session, csv_path: Optional[str] = None, max_rows: int = 
                 u = _row_lookup(row, "user", "user_id", "username")
                 if u is not None:
                     entity = f"user:{u}"
+            entity = canonical_entity(entity)
 
             label = None
             for label_field in ('label', 'anomaly', 'is_anomaly', 'class', 'attack'):
@@ -491,8 +539,8 @@ def ingest_tda_csv(db: Session, csv_path: Optional[str] = None, max_rows: int = 
                         if str(v).lower() in ('anomaly', 'true', '1', 'yes', 'attack'):
                             label = 1
                             break
-            if label is None:
-                label = 1 if _rng.random() < ANOMALY_RATE else 0
+            # label stays None when the dataset has no labels: synthetic labels
+            # are produced later by Isolation Forest at feature-build time.
 
             features: Dict[str, Any] = {"source": "TDA"}
             for k in ("user", "table", "user_id", "table_id"):

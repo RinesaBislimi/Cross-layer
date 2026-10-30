@@ -37,6 +37,13 @@ class Settings(BaseSettings):
     SMTP_PASS: str = ""
     SMTP_FROM: str = ""
 
+    # Privacy by design (paper Section 4.6): when enabled, every identifier used
+    # for cross-layer correlation (IP, host, user) is replaced at ingestion by a
+    # keyed hash (HMAC-SHA-256) so the stored entity does not reveal raw
+    # personal data; correlation still works because matching is exact on the hash.
+    PSEUDONYMISE_ENTITIES: bool = False
+    ENTITY_HMAC_KEY: str = ""   # falls back to JWT_SECRET when empty
+
     JWT_SECRET: str = "change-me-in-production-use-a-long-random-string"
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_HOURS: int = 24

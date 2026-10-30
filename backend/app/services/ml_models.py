@@ -17,6 +17,8 @@ from sklearn.metrics import (
 )
 from sklearn.model_selection import StratifiedKFold, cross_validate, train_test_split
 from sklearn.neural_network import MLPClassifier
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 from sklearn.svm import LinearSVC
 from xgboost import XGBClassifier
 
@@ -87,19 +89,30 @@ def train_lgbm_classifier(X, y, n_estimators: int = 100, random_state: int = 42)
     return model
 
 def train_svm_classifier(X, y, random_state: int = 42):
+    # StandardScaler is placed inside the Pipeline so it is fit on the training
+    # fold only (both here and under cross-validation), preventing train/test
+    # leakage for the scale-sensitive linear SVM.
     base = LinearSVC(random_state=random_state, max_iter=2000)
-    model = CalibratedClassifierCV(base, cv=3)
+    model = Pipeline([
+        ("scaler", StandardScaler()),
+        ("clf", CalibratedClassifierCV(base, cv=3)),
+    ])
     model.fit(X, y)
     return model
 
 def train_mlp_classifier(X, y, random_state: int = 42):
-    model = MLPClassifier(
-        hidden_layer_sizes=(128, 64),
-        max_iter=300,
-        random_state=random_state,
-        early_stopping=True,
-        validation_fraction=0.1,
-    )
+    # Scaling is fit on the training data only (inside the Pipeline), which both
+    # improves MLP convergence and avoids leaking test-set statistics.
+    model = Pipeline([
+        ("scaler", StandardScaler()),
+        ("clf", MLPClassifier(
+            hidden_layer_sizes=(128, 64),
+            max_iter=300,
+            random_state=random_state,
+            early_stopping=True,
+            validation_fraction=0.1,
+        )),
+    ])
     model.fit(X, y)
     return model
 
