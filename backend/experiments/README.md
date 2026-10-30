@@ -11,7 +11,8 @@ python experiments/correlation_eval.py    # Tables 9-10, Fig. 4: correlation eng
 python experiments/second_stage_eval.py   # Table 11: learned second-stage incident classifier
 python experiments/benchmark.py           # Table 12: throughput, latency, memory (run on an idle machine)
 python experiments/make_figures.py        # Figs. 1-4
-python experiments/revise_manuscript.py   # injects all numbers into the revised .docx
+python experiments/temporal_cicids_true.py <GeneratedLabelledFlows.zip>   # Table 8 (timestamped per-day flows)
+python experiments/ait_ads_eval.py <dir with ait_ads.zip + labels.csv>      # Table 13 (AIT Alert Data Set)
 ```
 
 | Script | Answers reviewer points |
@@ -30,4 +31,4 @@ on the 70 % train partition only; headline metrics are measured on the untouched
 partition only.
 
 Environment: Python 3.9, scikit-learn 1.5.1, xgboost 2.1.1, lightgbm 4.5.0,
-pandas 2.2.2, numpy 1.26.4, python-docx, matplotlib.
+pandas 2.2.2, numpy 1.26.4, matplotlib.
