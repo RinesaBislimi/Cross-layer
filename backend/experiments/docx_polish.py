@@ -231,7 +231,58 @@ def style_tables(doc, font_pt: float = 8.0) -> int:
     return len(doc.tables)
 
 
+# --------------------------------------------------------------------------- #
+# algorithm box (Section 4.4)
+# --------------------------------------------------------------------------- #
+def box_algorithm(doc, title_prefix: str = "Algorithm 1", last_line_prefix: str = "11: return") -> int:
+    """Move the Algorithm 1 title and its pseudocode lines into a single-cell
+    bordered box; code lines are set in italic, left-aligned, tight spacing."""
+    paras = doc.paragraphs
+    start = next((i for i, p in enumerate(paras) if p.text.strip().startswith(title_prefix)), None)
+    if start is None:
+        return 0
+    end = next((i for i in range(start, len(paras)) if paras[i].text.strip().startswith(last_line_prefix)), None)
+    if end is None:
+        return 0
+    block = paras[start:end + 1]
+    tbl = doc.add_table(rows=1, cols=1)
+    tblPr = tbl._tbl.tblPr
+    borders = OxmlElement("w:tblBorders")
+    for edge in ("top", "left", "bottom", "right"):
+        el = OxmlElement(f"w:{edge}")
+        el.set(qn("w:val"), "single"); el.set(qn("w:sz"), "8"); el.set(qn("w:space"), "0"); el.set(qn("w:color"), "000000")
+        borders.append(el)
+    tblPr.append(borders)
+    w = OxmlElement("w:tblW"); w.set(qn("w:w"), "5000"); w.set(qn("w:type"), "pct"); tblPr.append(w)
+    mar = OxmlElement("w:tblCellMar")
+    for side, val in (("left", "120"), ("right", "120"), ("top", "80"), ("bottom", "80")):
+        el = OxmlElement(f"w:{side}"); el.set(qn("w:w"), val); el.set(qn("w:type"), "dxa"); mar.append(el)
+    tblPr.append(mar)
+    block[0]._p.addprevious(tbl._tbl)
+    cell = tbl.rows[0].cells[0]
+    tc = cell._tc
+    for ph in list(cell.paragraphs):           # drop the default empty paragraph
+        tc.remove(ph._p)
+    for i, p in enumerate(block):
+        tc.append(p._p)
+        p.alignment = None
+        p.paragraph_format.left_indent = 0
+        p.paragraph_format.first_line_indent = 0
+        p.paragraph_format.space_before = Pt(0)
+        p.paragraph_format.space_after = Pt(1 if i else 4)
+        for r in p.runs:
+            if i == 0:
+                r.font.bold = True
+            else:
+                r.font.italic = True
+                r.font.size = Pt(9)
+    # keep the box on one page where possible
+    block[0].paragraph_format.keep_with_next = True
+    return len(block)
+
+
 def polish(doc) -> dict:
     out = {"tables": style_tables(doc), "captions": style_captions(doc)}
+    out["algorithm_box_lines"] = box_algorithm(doc)
     out.update(make_references_clickable(doc))
     return out
